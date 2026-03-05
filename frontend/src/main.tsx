@@ -1,20 +1,16 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
-import { MsalProvider } from '@azure/msal-react'
-import { PublicClientApplication } from '@azure/msal-browser'
 import App from './App'
 import './styles/index.css'
-import { msalConfig } from './services/authConfig'
 
-const msalInstance = new PublicClientApplication(msalConfig)
+// Demo mode - no authentication required
+// When Azure AD B2C is configured, swap back to use MsalProvider
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <MsalProvider instance={msalInstance}>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </MsalProvider>
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
   </React.StrictMode>,
 )

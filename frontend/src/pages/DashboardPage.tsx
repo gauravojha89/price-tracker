@@ -1,15 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useMsal } from '@azure/msal-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Package, Search } from 'lucide-react'
 import ProductCard from '../components/ProductCard'
 import AddProductModal from '../components/AddProductModal'
 import LoadingSpinner from '../components/LoadingSpinner'
-import apiService from '../services/api'
+import api from '../services/simpleApi'
 import type { Product } from '../types'
 
 export default function DashboardPage() {
-  const { instance } = useMsal()
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -17,16 +15,11 @@ export default function DashboardPage() {
   const [refreshingIds, setRefreshingIds] = useState<Set<string>>(new Set())
   const [searchQuery, setSearchQuery] = useState('')
 
-  // Initialize API service with MSAL instance
-  useEffect(() => {
-    apiService.setMsalInstance(instance)
-  }, [instance])
-
   // Fetch products
   const fetchProducts = useCallback(async () => {
     setLoading(true)
     setError(null)
-    const result = await apiService.getProducts()
+    const result = await api.getProducts()
     if (result.success && result.data) {
       setProducts(result.data)
     } else {
@@ -41,7 +34,7 @@ export default function DashboardPage() {
 
   // Add product handler
   const handleAddProduct = async (data: { name: string; url?: string }) => {
-    const result = await apiService.createProduct(data)
+    const result = await api.createProduct(data)
     if (result.success && result.data) {
       setProducts((prev) => [result.data!, ...prev])
     } else {
@@ -51,7 +44,7 @@ export default function DashboardPage() {
 
   // Delete product handler
   const handleDelete = async (id: string) => {
-    const result = await apiService.deleteProduct(id)
+    const result = await api.deleteProduct(id)
     if (result.success) {
       setProducts((prev) => prev.filter((p) => p.id !== id))
     }
@@ -60,7 +53,7 @@ export default function DashboardPage() {
   // Refresh price handler
   const handleRefresh = async (id: string) => {
     setRefreshingIds((prev) => new Set(prev).add(id))
-    const result = await apiService.refreshPrice(id)
+    const result = await api.refreshPrice(id)
     if (result.success && result.data) {
       setProducts((prev) =>
         prev.map((p) => (p.id === id ? result.data! : p))
@@ -77,7 +70,7 @@ export default function DashboardPage() {
   const filteredProducts = products.filter(
     (p) =>
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.store.toLowerCase().includes(searchQuery.toLowerCase())
+      (p.store && p.store.toLowerCase().includes(searchQuery.toLowerCase()))
   )
 
   // Stats

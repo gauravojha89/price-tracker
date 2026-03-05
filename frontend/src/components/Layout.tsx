@@ -1,26 +1,14 @@
 import { ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { useIsAuthenticated, useMsal } from '@azure/msal-react'
 import { motion } from 'framer-motion'
-import { TrendingDown, User, LayoutDashboard, LogOut, LogIn } from 'lucide-react'
-import { loginRequest } from '../services/authConfig'
+import { TrendingDown, User, LayoutDashboard } from 'lucide-react'
 
 interface LayoutProps {
   children: ReactNode
 }
 
 export default function Layout({ children }: LayoutProps) {
-  const isAuthenticated = useIsAuthenticated()
-  const { instance } = useMsal()
   const location = useLocation()
-
-  const handleLogin = () => {
-    instance.loginRedirect(loginRequest)
-  }
-
-  const handleLogout = () => {
-    instance.logoutRedirect()
-  }
 
   const isActive = (path: string) => location.pathname === path
 
@@ -40,33 +28,14 @@ export default function Layout({ children }: LayoutProps) {
 
             {/* Navigation */}
             <nav className="flex items-center gap-2">
-              {isAuthenticated ? (
-                <>
-                  <NavLink to="/dashboard" active={isActive('/dashboard')}>
-                    <LayoutDashboard className="w-4 h-4" />
-                    <span>Dashboard</span>
-                  </NavLink>
-                  <NavLink to="/profile" active={isActive('/profile')}>
-                    <User className="w-4 h-4" />
-                    <span>Profile</span>
-                  </NavLink>
-                  <button
-                    onClick={handleLogout}
-                    className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    <span>Sign Out</span>
-                  </button>
-                </>
-              ) : (
-                <button
-                  onClick={handleLogin}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-colors shadow-lg shadow-gray-900/25"
-                >
-                  <LogIn className="w-4 h-4" />
-                  <span>Sign In</span>
-                </button>
-              )}
+              <NavLink to="/dashboard" active={isActive('/dashboard')}>
+                <LayoutDashboard className="w-4 h-4" />
+                <span>Dashboard</span>
+              </NavLink>
+              <NavLink to="/profile" active={isActive('/profile')}>
+                <User className="w-4 h-4" />
+                <span>Profile</span>
+              </NavLink>
             </nav>
           </div>
         </div>

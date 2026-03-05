@@ -1,20 +1,12 @@
-import { useMsal, useIsAuthenticated } from '@azure/msal-react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { TrendingDown, Bell, Shield, Zap, ArrowRight } from 'lucide-react'
-import { loginRequest } from '../services/authConfig'
 
 export default function HomePage() {
-  const { instance } = useMsal()
-  const isAuthenticated = useIsAuthenticated()
   const navigate = useNavigate()
 
   const handleGetStarted = () => {
-    if (isAuthenticated) {
-      navigate('/dashboard')
-    } else {
-      instance.loginRedirect(loginRequest)
-    }
+    navigate('/dashboard')
   }
 
   return (
@@ -63,7 +55,7 @@ export default function HomePage() {
               onClick={handleGetStarted}
               className="inline-flex items-center gap-2 px-8 py-4 bg-gray-900 text-white text-lg font-medium rounded-2xl hover:bg-gray-800 transition-all shadow-xl shadow-gray-900/20 hover:shadow-gray-900/30 hover:scale-105"
             >
-              {isAuthenticated ? 'Go to Dashboard' : 'Get Started'}
+              Get Started
               <ArrowRight className="w-5 h-5" />
             </button>
           </motion.div>

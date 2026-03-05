@@ -2,28 +2,28 @@ export interface User {
   id: string
   email: string
   name: string
-  phoneNumber?: string
+  phoneNumber?: string | null
   notificationPreference: 'email' | 'sms' | 'both'
-  createdAt: string
-  updatedAt: string
+  createdAt?: string
+  updatedAt?: string
 }
 
 export interface Product {
   id: string
   userId: string
   name: string
-  url?: string
-  store: string
-  originalPrice: number
-  currentPrice: number
-  targetPrice?: number
-  currency: string
-  imageUrl?: string
+  url?: string | null
+  store?: string
+  originalPrice?: number | null
+  currentPrice?: number | null
+  targetPrice?: number | null
+  currency?: string
+  imageUrl?: string | null
   isOnSale: boolean
   priceHistory: PricePoint[]
   createdAt: string
   updatedAt: string
-  lastChecked: string
+  lastChecked?: string | null
 }
 
 export interface PricePoint {

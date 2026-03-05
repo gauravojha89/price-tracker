@@ -1,14 +1,12 @@
 import { useState, useEffect, FormEvent } from 'react'
-import { useMsal } from '@azure/msal-react'
 import { motion } from 'framer-motion'
 import { User, Mail, Phone, Bell, Save, Loader2, CheckCircle } from 'lucide-react'
 import LoadingSpinner from '../components/LoadingSpinner'
-import apiService from '../services/api'
+import api from '../services/simpleApi'
 import type { User as UserType, UpdateUserRequest } from '../types'
 
 export default function ProfilePage() {
-  const { instance, accounts } = useMsal()
-  const [_user, setUser] = useState<UserType | null>(null)
+  const [user, setUser] = useState<UserType | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -19,17 +17,16 @@ export default function ProfilePage() {
   const [phoneNumber, setPhoneNumber] = useState('')
   const [notificationPreference, setNotificationPreference] = useState<'email' | 'sms' | 'both'>('email')
 
-  // Get email from MSAL account
-  const email = accounts[0]?.username || ''
+  // Get email from user profile
+  const email = user?.email || 'demo@example.com'
 
   useEffect(() => {
-    apiService.setMsalInstance(instance)
     fetchProfile()
-  }, [instance])
+  }, [])
 
   const fetchProfile = async () => {
     setLoading(true)
-    const result = await apiService.getProfile()
+    const result = await api.getProfile()
     if (result.success && result.data) {
       setUser(result.data)
       setName(result.data.name || '')
@@ -58,7 +55,7 @@ export default function ProfilePage() {
       notificationPreference,
     }
 
-    const result = await apiService.updateProfile(data)
+    const result = await api.updateProfile(data)
     if (result.success && result.data) {
       setUser(result.data)
       setSaved(true)

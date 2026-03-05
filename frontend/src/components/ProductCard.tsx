@@ -15,9 +15,11 @@ export default function ProductCard({
   onRefresh,
   isRefreshing,
 }: ProductCardProps) {
-  const priceChange = product.originalPrice - product.currentPrice
-  const percentageOff = ((priceChange / product.originalPrice) * 100).toFixed(0)
-  const isOnSale = product.currentPrice < product.originalPrice
+  const currentPrice = product.currentPrice ?? 0
+  const originalPrice = product.originalPrice ?? currentPrice
+  const priceChange = originalPrice - currentPrice
+  const percentageOff = originalPrice > 0 ? ((priceChange / originalPrice) * 100).toFixed(0) : '0'
+  const isOnSale = currentPrice < originalPrice && originalPrice > 0
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -55,35 +57,43 @@ export default function ProductCard({
         {/* Product Info */}
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-gray-900 truncate">{product.name}</h3>
-          <p className="text-sm text-gray-500 mt-0.5">{product.store}</p>
+          <p className="text-sm text-gray-500 mt-0.5">{product.store || 'Unknown store'}</p>
 
           {/* Price Display */}
           <div className="flex items-baseline gap-2 mt-3">
-            <span className="text-2xl font-bold text-gray-900">
-              {formatCurrency(product.currentPrice)}
-            </span>
-            {isOnSale && (
+            {currentPrice > 0 ? (
               <>
-                <span className="text-sm text-gray-400 line-through">
-                  {formatCurrency(product.originalPrice)}
+                <span className="text-2xl font-bold text-gray-900">
+                  {formatCurrency(currentPrice)}
                 </span>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-medium">
-                  <TrendingDown className="w-3 h-3" />
-                  {percentageOff}% off
-                </span>
+                {isOnSale && (
+                  <>
+                    <span className="text-sm text-gray-400 line-through">
+                      {formatCurrency(originalPrice)}
+                    </span>
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-medium">
+                      <TrendingDown className="w-3 h-3" />
+                      {percentageOff}% off
+                    </span>
+                  </>
+                )}
+                {currentPrice > originalPrice && originalPrice > 0 && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-medium">
+                    <TrendingUp className="w-3 h-3" />
+                    Price increased
+                  </span>
+                )}
               </>
-            )}
-            {product.currentPrice > product.originalPrice && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-medium">
-                <TrendingUp className="w-3 h-3" />
-                Price increased
-              </span>
+            ) : (
+              <span className="text-lg text-gray-500 italic">Price not yet checked</span>
             )}
           </div>
 
           {/* Last checked */}
           <p className="text-xs text-gray-400 mt-2">
-            Last checked: {new Date(product.lastChecked).toLocaleDateString()}
+            {product.lastChecked 
+              ? `Last checked: ${new Date(product.lastChecked).toLocaleDateString()}`
+              : 'Not yet checked'}
           </p>
         </div>
       </div>
