@@ -6,19 +6,19 @@
       "value": "dev"
     },
     "location": {
-      "value": "eastus"
+      "value": "westus2"
     },
     "baseName": {
       "value": "pricewatch"
     },
     "githubRepo": {
-      "value": "YOUR_GITHUB_USERNAME/price-tracker"
+      "value": "gauravojha89/price-tracker"
     },
     "b2cTenantName": {
-      "value": "YOUR_B2C_TENANT_NAME"
+      "value": "pricewatchb2c"
     },
     "b2cClientId": {
-      "value": "YOUR_B2C_CLIENT_ID"
+      "value": "00000000-0000-0000-0000-000000000000"
     }
   }
 }

@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: Deploy to Azure Static Web Apps
 
 on:
   push:
@@ -8,55 +8,16 @@ on:
   workflow_dispatch:
 
 permissions:
-  id-token: write  # Required for OIDC federation
+  id-token: write
   contents: read
-  security-events: write  # For CodeQL
 
 env:
-  AZURE_FUNCTIONAPP_NAME: '' # Set in workflow
-  AZURE_STATICWEBAPP_NAME: '' # Set in workflow
   NODE_VERSION: '20.x'
 
 jobs:
-  # Security scanning
-  security-scan:
-    name: Security Scan
+  build-and-deploy:
+    name: Build and Deploy
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
-        with:
-          languages: javascript-typescript
-
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
-
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
-
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
-          severity: 'CRITICAL,HIGH'
-
-      - name: Upload Trivy scan results
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: 'trivy-results.sarif'
-
-  # Build and test frontend
-  build-frontend:
-    name: Build Frontend
-    runs-on: ubuntu-latest
-    needs: security-scan
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -65,18 +26,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
 
-      - name: Install dependencies
+      # Build Frontend
+      - name: Install frontend dependencies
         working-directory: frontend
         run: npm ci
 
-      - name: Lint
-        working-directory: frontend
-        run: npm run lint
-
-      - name: Build
+      - name: Build frontend
         working-directory: frontend
         env:
           VITE_AZURE_CLIENT_ID: ${{ secrets.AZURE_B2C_CLIENT_ID }}
@@ -85,138 +41,16 @@ jobs:
           VITE_API_BASE_URL: '/api'
         run: npm run build
 
-      - name: Upload frontend artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-dist
-          path: frontend/dist
-          retention-days: 1
-
-  # Build and test backend
-  build-backend:
-    name: Build Backend
-    runs-on: ubuntu-latest
-    needs: security-scan
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: backend/package-lock.json
-
-      - name: Install dependencies
-        working-directory: backend
+      # Build API
+      - name: Install API dependencies
+        working-directory: api
         run: npm ci
 
-      - name: Lint
-        working-directory: backend
-        run: npm run lint
-
-      - name: Build
-        working-directory: backend
+      - name: Build API
+        working-directory: api
         run: npm run build
 
-      - name: Run tests
-        working-directory: backend
-        run: npm test || true # Allow tests to fail for now
-
-      - name: Upload backend artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-dist
-          path: |
-            backend/dist
-            backend/host.json
-            backend/package.json
-            backend/package-lock.json
-          retention-days: 1
-
-  # Deploy infrastructure (only on main)
-  deploy-infrastructure:
-    name: Deploy Infrastructure
-    runs-on: ubuntu-latest
-    needs: [build-frontend, build-backend]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    outputs:
-      functionAppName: ${{ steps.deploy.outputs.functionAppName }}
-      staticWebAppName: ${{ steps.deploy.outputs.staticWebAppName }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Azure Login (OIDC)
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Deploy Bicep template
-        id: deploy
-        uses: azure/arm-deploy@v2
-        with:
-          subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          resourceGroupName: ${{ secrets.AZURE_RESOURCE_GROUP }}
-          template: ./infra/main.bicep
-          parameters: >
-            environment=dev
-            githubRepo=${{ github.repository }}
-            b2cTenantName=${{ secrets.AZURE_B2C_TENANT_NAME }}
-            b2cClientId=${{ secrets.AZURE_B2C_CLIENT_ID }}
-          failOnStdErr: false
-
-  # Deploy backend
-  deploy-backend:
-    name: Deploy Backend
-    runs-on: ubuntu-latest
-    needs: deploy-infrastructure
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    steps:
-      - name: Download backend artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: backend-dist
-          path: backend
-
-      - name: Azure Login (OIDC)
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Install production dependencies
-        working-directory: backend
-        run: npm ci --production
-
-      - name: Deploy to Azure Functions
-        uses: Azure/functions-action@v1
-        with:
-          app-name: ${{ needs.deploy-infrastructure.outputs.functionAppName }}
-          package: backend
-
-  # Deploy frontend
-  deploy-frontend:
-    name: Deploy Frontend
-    runs-on: ubuntu-latest
-    needs: deploy-infrastructure
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    steps:
-      - name: Download frontend artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: frontend-dist
-          path: frontend/dist
-
+      # Deploy to Azure Static Web Apps
       - name: Deploy to Azure Static Web Apps
         uses: Azure/static-web-apps-deploy@v1
         with:
@@ -224,4 +58,18 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: 'upload'
           app_location: 'frontend/dist'
+          api_location: 'api'
           skip_app_build: true
+          skip_api_build: true
+
+  # Close PR preview environment
+  close-pull-request:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    name: Close Pull Request
+    steps:
+      - name: Close Pull Request
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          action: 'close'

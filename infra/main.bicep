@@ -1,6 +1,6 @@
-// PriceWatch Azure Infrastructure
-// This Bicep file defines all Azure resources needed for the application
-// Uses Managed Identity and FIC (Federated Identity Credentials) for secure, keyless authentication
+// PriceWatch Azure Infrastructure - Simplified
+// Uses Azure Static Web Apps with built-in API (no separate Function App needed)
+// All resources are free tier eligible
 
 targetScope = 'resourceGroup'
 
@@ -26,14 +26,13 @@ param b2cClientId string
 
 // Variables
 var resourceSuffix = '${baseName}-${environment}-${uniqueString(resourceGroup().id)}'
-var functionAppName = 'func-${resourceSuffix}'
 var staticWebAppName = 'swa-${resourceSuffix}'
 var cosmosDbAccountName = 'cosmos-${resourceSuffix}'
-var storageAccountName = take(replace('st${baseName}${environment}${uniqueString(resourceGroup().id)}', '-', ''), 24)
+var storageAccountName = take('st${replace(baseName, '-', '')}${environment}${uniqueString(resourceGroup().id)}', 24)
 var appInsightsName = 'appi-${resourceSuffix}'
 var logAnalyticsName = 'log-${resourceSuffix}'
-var keyVaultName = take('kv-${resourceSuffix}', 24)
 var communicationServiceName = 'acs-${resourceSuffix}'
+var staticWebAppLocation = 'westus2'
 
 // Tags
 var tags = {
@@ -42,7 +41,7 @@ var tags = {
   ManagedBy: 'Bicep'
 }
 
-// Log Analytics Workspace (required for App Insights)
+// Log Analytics Workspace
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
   name: logAnalyticsName
   location: location
@@ -64,12 +63,10 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
   properties: {
     Application_Type: 'web'
     WorkspaceResourceId: logAnalytics.id
-    publicNetworkAccessForIngestion: 'Enabled'
-    publicNetworkAccessForQuery: 'Enabled'
   }
 }
 
-// Storage Account for Functions
+// Storage Account
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   name: storageAccountName
   location: location
@@ -82,14 +79,10 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
     supportsHttpsTrafficOnly: true
     minimumTlsVersion: 'TLS1_2'
     allowBlobPublicAccess: false
-    networkAcls: {
-      bypass: 'AzureServices'
-      defaultAction: 'Allow' // Would be 'Deny' with VNet in production
-    }
   }
 }
 
-// Cosmos DB Account (Free Tier eligible)
+// Cosmos DB Account (Free Tier)
 resource cosmosDbAccount 'Microsoft.DocumentDB/databaseAccounts@2023-11-15' = {
   name: cosmosDbAccountName
   location: location
@@ -97,7 +90,7 @@ resource cosmosDbAccount 'Microsoft.DocumentDB/databaseAccounts@2023-11-15' = {
   kind: 'GlobalDocumentDB'
   properties: {
     databaseAccountOfferType: 'Standard'
-    enableFreeTier: true // Free tier: 1000 RU/s, 25GB storage
+    enableFreeTier: true
     consistencyPolicy: {
       defaultConsistencyLevel: 'Session'
     }
@@ -108,18 +101,12 @@ resource cosmosDbAccount 'Microsoft.DocumentDB/databaseAccounts@2023-11-15' = {
         isZoneRedundant: false
       }
     ]
-    capabilities: [
-      {
-        name: 'EnableServerless' // Serverless for pay-per-use (alternative to free tier)
-      }
-    ]
     backupPolicy: {
       type: 'Continuous'
       continuousModeProperties: {
         tier: 'Continuous7Days'
       }
     }
-    disableLocalAuth: true // Force AAD authentication only
   }
 }
 
@@ -145,16 +132,6 @@ resource usersContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/cont
         paths: ['/id']
         kind: 'Hash'
       }
-      indexingPolicy: {
-        indexingMode: 'consistent'
-        automatic: true
-        includedPaths: [
-          { path: '/email/?' }
-        ]
-        excludedPaths: [
-          { path: '/*' }
-        ]
-      }
     }
   }
 }
@@ -168,17 +145,6 @@ resource productsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/c
       partitionKey: {
         paths: ['/userId']
         kind: 'Hash'
-      }
-      indexingPolicy: {
-        indexingMode: 'consistent'
-        automatic: true
-        includedPaths: [
-          { path: '/userId/?' }
-          { path: '/lastChecked/?' }
-        ]
-        excludedPaths: [
-          { path: '/*' }
-        ]
       }
     }
   }
@@ -194,7 +160,7 @@ resource alertsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/con
         paths: ['/userId']
         kind: 'Hash'
       }
-      defaultTtl: 7776000 // 90 days
+      defaultTtl: 7776000
     }
   }
 }
@@ -202,163 +168,17 @@ resource alertsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/con
 // Azure Communication Services
 resource communicationService 'Microsoft.Communication/communicationServices@2023-04-01' = {
   name: communicationServiceName
-  location: 'global' // ACS is global
+  location: 'global'
   tags: tags
   properties: {
     dataLocation: 'United States'
   }
 }
 
-// Key Vault (for any secrets that can't use MSI)
-resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
-  name: keyVaultName
-  location: location
-  tags: tags
-  properties: {
-    sku: {
-      family: 'A'
-      name: 'standard'
-    }
-    tenantId: subscription().tenantId
-    enableRbacAuthorization: true
-    enabledForDeployment: false
-    enabledForDiskEncryption: false
-    enabledForTemplateDeployment: false
-    enableSoftDelete: true
-    softDeleteRetentionInDays: 7
-    publicNetworkAccess: 'Enabled'
-    networkAcls: {
-      bypass: 'AzureServices'
-      defaultAction: 'Allow'
-    }
-  }
-}
-
-// App Service Plan (Consumption for cost savings)
-resource appServicePlan 'Microsoft.Web/serverfarms@2023-01-01' = {
-  name: 'plan-${resourceSuffix}'
-  location: location
-  tags: tags
-  sku: {
-    name: 'Y1' // Consumption plan - free tier eligible
-    tier: 'Dynamic'
-  }
-  properties: {
-    reserved: true // Linux
-  }
-}
-
-// Function App with Managed Identity
-resource functionApp 'Microsoft.Web/sites@2023-01-01' = {
-  name: functionAppName
-  location: location
-  tags: tags
-  kind: 'functionapp,linux'
-  identity: {
-    type: 'SystemAssigned'
-  }
-  properties: {
-    serverFarmId: appServicePlan.id
-    httpsOnly: true
-    publicNetworkAccess: 'Enabled'
-    siteConfig: {
-      linuxFxVersion: 'NODE|20'
-      ftpsState: 'Disabled'
-      minTlsVersion: '1.2'
-      http20Enabled: true
-      cors: {
-        allowedOrigins: [
-          'https://${staticWebAppName}.azurestaticapps.net'
-        ]
-        supportCredentials: true
-      }
-      appSettings: [
-        {
-          name: 'AzureWebJobsStorage__accountName'
-          value: storageAccount.name
-        }
-        {
-          name: 'FUNCTIONS_EXTENSION_VERSION'
-          value: '~4'
-        }
-        {
-          name: 'FUNCTIONS_WORKER_RUNTIME'
-          value: 'node'
-        }
-        {
-          name: 'WEBSITE_NODE_DEFAULT_VERSION'
-          value: '~20'
-        }
-        {
-          name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
-          value: appInsights.properties.ConnectionString
-        }
-        {
-          name: 'COSMOS_DB_ENDPOINT'
-          value: cosmosDbAccount.properties.documentEndpoint
-        }
-        {
-          name: 'COSMOS_DB_DATABASE'
-          value: 'pricetracker'
-        }
-        {
-          name: 'AZURE_AD_B2C_TENANT'
-          value: b2cTenantName
-        }
-        {
-          name: 'AZURE_AD_B2C_CLIENT_ID'
-          value: b2cClientId
-        }
-        {
-          name: 'AZURE_AD_B2C_POLICY'
-          value: 'B2C_1_signupsignin'
-        }
-        {
-          name: 'COMMUNICATION_SERVICES_ENDPOINT'
-          value: 'https://${communicationServiceName}.communication.azure.com'
-        }
-      ]
-    }
-  }
-}
-
-// RBAC: Function App -> Cosmos DB (Data Contributor)
-resource cosmosRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2023-11-15' = {
-  parent: cosmosDbAccount
-  name: guid(cosmosDbAccount.id, functionApp.id, 'cosmos-data-contributor')
-  properties: {
-    roleDefinitionId: '${cosmosDbAccount.id}/sqlRoleDefinitions/00000000-0000-0000-0000-000000000002' // Cosmos DB Built-in Data Contributor
-    principalId: functionApp.identity.principalId
-    scope: cosmosDbAccount.id
-  }
-}
-
-// RBAC: Function App -> Storage (Blob Data Owner)
-resource storageRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(storageAccount.id, functionApp.id, 'storage-blob-owner')
-  scope: storageAccount
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b7e6dc6d-f1e8-4753-8033-0f276bb0955b') // Storage Blob Data Owner
-    principalId: functionApp.identity.principalId
-    principalType: 'ServicePrincipal'
-  }
-}
-
-// RBAC: Function App -> Communication Services (Contributor)
-resource acsRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(communicationService.id, functionApp.id, 'acs-contributor')
-  scope: communicationService
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c') // Contributor
-    principalId: functionApp.identity.principalId
-    principalType: 'ServicePrincipal'
-  }
-}
-
-// Static Web App for Frontend
+// Static Web App (Free tier - includes API functions!)
 resource staticWebApp 'Microsoft.Web/staticSites@2023-01-01' = {
   name: staticWebAppName
-  location: location // Note: SWA has limited regions
+  location: staticWebAppLocation
   tags: tags
   sku: {
     name: 'Free'
@@ -367,25 +187,25 @@ resource staticWebApp 'Microsoft.Web/staticSites@2023-01-01' = {
   properties: {
     stagingEnvironmentPolicy: 'Enabled'
     allowConfigFileUpdates: true
-    buildProperties: {
-      appLocation: '/frontend'
-      apiLocation: ''
-      outputLocation: 'dist'
-    }
   }
 }
 
-// Static Web App Backend Link
-resource staticWebAppBackend 'Microsoft.Web/staticSites/linkedBackends@2023-01-01' = {
+// Static Web App App Settings (via config)
+resource staticWebAppSettings 'Microsoft.Web/staticSites/config@2023-01-01' = {
   parent: staticWebApp
-  name: 'backend'
+  name: 'appsettings'
   properties: {
-    backendResourceId: functionApp.id
-    region: location
+    COSMOS_DB_ENDPOINT: cosmosDbAccount.properties.documentEndpoint
+    COSMOS_DB_KEY: cosmosDbAccount.listKeys().primaryMasterKey
+    COSMOS_DB_DATABASE: 'pricetracker'
+    AZURE_AD_B2C_TENANT: b2cTenantName
+    AZURE_AD_B2C_CLIENT_ID: b2cClientId
+    AZURE_AD_B2C_POLICY: 'B2C_1_signupsignin'
+    APPLICATIONINSIGHTS_CONNECTION_STRING: appInsights.properties.ConnectionString
   }
 }
 
-// User Assigned Identity for GitHub Actions (for FIC)
+// User Assigned Identity for GitHub Actions
 resource deploymentIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: 'id-deploy-${resourceSuffix}'
   location: location
@@ -407,18 +227,17 @@ resource federatedCredential 'Microsoft.ManagedIdentity/userAssignedIdentities/f
 resource deploymentRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(resourceGroup().id, deploymentIdentity.id, 'contributor')
   properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c') // Contributor
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')
     principalId: deploymentIdentity.properties.principalId
     principalType: 'ServicePrincipal'
   }
 }
 
 // Outputs
-output functionAppName string = functionApp.name
-output functionAppUrl string = 'https://${functionApp.properties.defaultHostName}'
 output staticWebAppName string = staticWebApp.name
 output staticWebAppUrl string = 'https://${staticWebApp.properties.defaultHostname}'
+output staticWebAppDeploymentToken string = staticWebApp.listSecrets().properties.apiKey
 output cosmosDbEndpoint string = cosmosDbAccount.properties.documentEndpoint
-output communicationServicesEndpoint string = 'https://${communicationServiceName}.communication.azure.com'
+output communicationServicesName string = communicationService.name
 output deploymentIdentityClientId string = deploymentIdentity.properties.clientId
-output deploymentIdentityPrincipalId string = deploymentIdentity.properties.principalId
+output appInsightsConnectionString string = appInsights.properties.ConnectionString
