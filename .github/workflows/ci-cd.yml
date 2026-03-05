@@ -59,8 +59,9 @@ jobs:
           action: 'upload'
           app_location: 'frontend/dist'
           api_location: 'api'
+          output_location: ''
           skip_app_build: true
-          skip_api_build: true
+          skip_api_build: false
 
   # Close PR preview environment
   close-pull-request:
