@@ -1,0 +1,192 @@
+import { useState, useEffect, useCallback } from 'react'
+import { useMsal } from '@azure/msal-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Plus, Package, Search } from 'lucide-react'
+import ProductCard from '../components/ProductCard'
+import AddProductModal from '../components/AddProductModal'
+import LoadingSpinner from '../components/LoadingSpinner'
+import apiService from '../services/api'
+import type { Product } from '../types'
+
+export default function DashboardPage() {
+  const { instance } = useMsal()
+  const [products, setProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [refreshingIds, setRefreshingIds] = useState<Set<string>>(new Set())
+  const [searchQuery, setSearchQuery] = useState('')
+
+  // Initialize API service with MSAL instance
+  useEffect(() => {
+    apiService.setMsalInstance(instance)
+  }, [instance])
+
+  // Fetch products
+  const fetchProducts = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    const result = await apiService.getProducts()
+    if (result.success && result.data) {
+      setProducts(result.data)
+    } else {
+      setError(result.error || 'Failed to load products')
+    }
+    setLoading(false)
+  }, [])
+
+  useEffect(() => {
+    fetchProducts()
+  }, [fetchProducts])
+
+  // Add product handler
+  const handleAddProduct = async (data: { name: string; url?: string }) => {
+    const result = await apiService.createProduct(data)
+    if (result.success && result.data) {
+      setProducts((prev) => [result.data!, ...prev])
+    } else {
+      throw new Error(result.error || 'Failed to add product')
+    }
+  }
+
+  // Delete product handler
+  const handleDelete = async (id: string) => {
+    const result = await apiService.deleteProduct(id)
+    if (result.success) {
+      setProducts((prev) => prev.filter((p) => p.id !== id))
+    }
+  }
+
+  // Refresh price handler
+  const handleRefresh = async (id: string) => {
+    setRefreshingIds((prev) => new Set(prev).add(id))
+    const result = await apiService.refreshPrice(id)
+    if (result.success && result.data) {
+      setProducts((prev) =>
+        prev.map((p) => (p.id === id ? result.data! : p))
+      )
+    }
+    setRefreshingIds((prev) => {
+      const next = new Set(prev)
+      next.delete(id)
+      return next
+    })
+  }
+
+  // Filter products by search
+  const filteredProducts = products.filter(
+    (p) =>
+      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.store.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  // Stats
+  const onSaleCount = products.filter((p) => p.isOnSale).length
+
+  if (loading) {
+    return <LoadingSpinner />
+  }
+
+  return (
+    <div className="max-w-6xl mx-auto px-6 py-10">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Your Products</h1>
+          <p className="text-gray-600 mt-1">
+            {products.length} products tracked
+            {onSaleCount > 0 && (
+              <span className="text-green-600 font-medium">
+                {' '}· {onSaleCount} on sale
+              </span>
+            )}
+          </p>
+        </div>
+
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white font-medium rounded-xl hover:bg-gray-800 transition-colors shadow-lg shadow-gray-900/20"
+        >
+          <Plus className="w-5 h-5" />
+          Track Product
+        </button>
+      </div>
+
+      {/* Error message */}
+      {error && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-red-50 text-red-700 px-4 py-3 rounded-xl mb-6"
+        >
+          {error}
+        </motion.div>
+      )}
+
+      {/* Search (only show if there are products) */}
+      {products.length > 0 && (
+        <div className="relative mb-6">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search products..."
+            className="w-full max-w-md pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+          />
+        </div>
+      )}
+
+      {/* Products Grid */}
+      {filteredProducts.length > 0 ? (
+        <div className="grid md:grid-cols-2 gap-6">
+          <AnimatePresence mode="popLayout">
+            {filteredProducts.map((product) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                onDelete={handleDelete}
+                onRefresh={handleRefresh}
+                isRefreshing={refreshingIds.has(product.id)}
+              />
+            ))}
+          </AnimatePresence>
+        </div>
+      ) : products.length > 0 ? (
+        <div className="text-center py-16">
+          <p className="text-gray-500">No products match your search.</p>
+        </div>
+      ) : (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center py-20"
+        >
+          <div className="w-20 h-20 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-6">
+            <Package className="w-10 h-10 text-gray-400" />
+          </div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            No products yet
+          </h2>
+          <p className="text-gray-600 mb-6 max-w-sm mx-auto">
+            Start tracking products to get notified when prices drop.
+          </p>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-600 text-white font-medium rounded-xl hover:bg-primary-700 transition-colors"
+          >
+            <Plus className="w-5 h-5" />
+            Track Your First Product
+          </button>
+        </motion.div>
+      )}
+
+      {/* Add Product Modal */}
+      <AddProductModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={handleAddProduct}
+      />
+    </div>
+  )
+}
