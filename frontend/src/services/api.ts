@@ -1,4 +1,4 @@
-import { PublicClientApplication } from '@azure/msal-browser'
+import { IPublicClientApplication } from '@azure/msal-browser'
 import { apiConfig } from './authConfig'
 import type { 
   User, 
@@ -10,13 +10,13 @@ import type {
 
 class ApiService {
   private baseUrl: string
-  private msalInstance: PublicClientApplication | null = null
+  private msalInstance: IPublicClientApplication | null = null
 
   constructor() {
     this.baseUrl = apiConfig.uri
   }
 
-  setMsalInstance(instance: PublicClientApplication) {
+  setMsalInstance(instance: IPublicClientApplication) {
     this.msalInstance = instance
   }
 
