@@ -1,0 +1,11 @@
+{
+  "name": "price-tracker-swa-api",
+  "version": "1.0.0",
+  "description": "Price Tracker API for Azure Static Web Apps",
+  "scripts": {
+    "start": "func start"
+  },
+  "dependencies": {
+    "@azure/cosmos": "^4.0.0"
+  }
+}

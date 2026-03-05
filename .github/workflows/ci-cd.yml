@@ -41,15 +41,6 @@ jobs:
           VITE_API_BASE_URL: '/api'
         run: npm run build
 
-      # Build API
-      - name: Install API dependencies
-        working-directory: api
-        run: npm ci
-
-      - name: Build API
-        working-directory: api
-        run: npm run build
-
       # Deploy to Azure Static Web Apps
       - name: Deploy to Azure Static Web Apps
         uses: Azure/static-web-apps-deploy@v1
@@ -58,6 +49,7 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: 'upload'
           app_location: 'frontend/dist'
+          api_location: 'swa-api'
           output_location: ''
           skip_app_build: true
 
