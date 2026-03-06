@@ -1,7 +1,8 @@
 import { ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { TrendingDown, User, LayoutDashboard } from 'lucide-react'
+import { TrendingDown, User, LayoutDashboard, LogIn, LogOut } from 'lucide-react'
+import { useAuth } from '../auth'
 
 interface LayoutProps {
   children: ReactNode
@@ -9,8 +10,25 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   const location = useLocation()
+  const { isAuthenticated, user, login, logout, isLoading } = useAuth()
 
   const isActive = (path: string) => location.pathname === path
+
+  const handleLogin = async () => {
+    try {
+      await login()
+    } catch (error) {
+      console.error('Login failed:', error)
+    }
+  }
+
+  const handleLogout = async () => {
+    try {
+      await logout()
+    } catch (error) {
+      console.error('Logout failed:', error)
+    }
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -28,14 +46,39 @@ export default function Layout({ children }: LayoutProps) {
 
             {/* Navigation */}
             <nav className="flex items-center gap-2">
-              <NavLink to="/dashboard" active={isActive('/dashboard')}>
-                <LayoutDashboard className="w-4 h-4" />
-                <span>Dashboard</span>
-              </NavLink>
-              <NavLink to="/profile" active={isActive('/profile')}>
-                <User className="w-4 h-4" />
-                <span>Profile</span>
-              </NavLink>
+              {isAuthenticated ? (
+                <>
+                  <NavLink to="/dashboard" active={isActive('/dashboard')}>
+                    <LayoutDashboard className="w-4 h-4" />
+                    <span>Dashboard</span>
+                  </NavLink>
+                  <NavLink to="/profile" active={isActive('/profile')}>
+                    <User className="w-4 h-4" />
+                    <span>Profile</span>
+                  </NavLink>
+                  <div className="ml-2 pl-2 border-l border-gray-200 flex items-center gap-3">
+                    <span className="text-sm text-gray-600 hidden sm:block">
+                      {user?.name || user?.username}
+                    </span>
+                    <button
+                      onClick={handleLogout}
+                      className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      <span className="hidden sm:inline">Sign Out</span>
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <button
+                  onClick={handleLogin}
+                  disabled={isLoading}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50"
+                >
+                  <LogIn className="w-4 h-4" />
+                  <span>Sign In</span>
+                </button>
+              )}
             </nav>
           </div>
         </div>

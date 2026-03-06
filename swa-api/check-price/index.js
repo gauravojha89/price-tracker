@@ -1,5 +1,6 @@
 const { CosmosClient } = require('@azure/cosmos');
 const { EmailClient } = require("@azure/communication-email");
+const { requireAuth, getUserId } = require('../shared/auth');
 
 let productsContainer = null;
 let usersContainer = null;
@@ -24,6 +25,14 @@ async function getContainers() {
 module.exports = async function (context, req) {
   context.log('Check price function triggered');
   
+  // Require authentication
+  const authError = await requireAuth(req, context);
+  if (authError) {
+    context.res = authError;
+    return;
+  }
+  
+  const userId = await getUserId(req, context);
   const { productId, url } = req.body || {};
   
   if (!productId && !url) {
@@ -38,13 +47,16 @@ module.exports = async function (context, req) {
   try {
     const { productsContainer, usersContainer } = await getContainers();
     
-    // If productId provided, fetch product from DB
+    // If productId provided, fetch product from DB (only if owned by user)
     let product = null;
     if (productId) {
       const { resources } = await productsContainer.items
         .query({
-          query: 'SELECT * FROM c WHERE c.id = @id',
-          parameters: [{ name: '@id', value: productId }]
+          query: 'SELECT * FROM c WHERE c.id = @id AND c.userId = @userId',
+          parameters: [
+            { name: '@id', value: productId },
+            { name: '@userId', value: userId }
+          ]
         })
         .fetchAll();
       product = resources[0];

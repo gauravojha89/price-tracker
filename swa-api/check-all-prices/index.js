@@ -1,5 +1,6 @@
 const { CosmosClient } = require('@azure/cosmos');
 const { EmailClient } = require("@azure/communication-email");
+const { requireAuth, getUserId } = require('../shared/auth');
 
 let productsContainer = null;
 let usersContainer = null;
@@ -24,22 +25,25 @@ async function getContainers() {
 module.exports = async function (context, req) {
   context.log('Check all prices triggered');
   
-  const { userId } = req.body || {};
+  // Require authentication
+  const authError = await requireAuth(req, context);
+  if (authError) {
+    context.res = authError;
+    return;
+  }
+  
+  // Get authenticated user's ID - only check their products
+  const userId = await getUserId(req, context);
   
   try {
     const { productsContainer, usersContainer } = await getContainers();
     
-    // Build query - if userId provided, check only their products
-    let query = 'SELECT * FROM c';
-    let parameters = [];
-    
-    if (userId) {
-      query = 'SELECT * FROM c WHERE c.userId = @userId';
-      parameters = [{ name: '@userId', value: userId }];
-    }
-    
+    // Only check products belonging to the authenticated user
     const { resources: products } = await productsContainer.items
-      .query({ query, parameters })
+      .query({
+        query: 'SELECT * FROM c WHERE c.userId = @userId',
+        parameters: [{ name: '@userId', value: userId }]
+      })
       .fetchAll();
     
     if (products.length === 0) {

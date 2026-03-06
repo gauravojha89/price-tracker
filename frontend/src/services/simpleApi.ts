@@ -1,5 +1,5 @@
-// Simple API service that doesn't require authentication
-// For demo mode - directly calls API endpoints
+// API service with authentication support
+// Includes access token in API calls when authenticated
 
 import type { Product, User } from '../types'
 
@@ -11,20 +11,44 @@ interface ApiResponse<T> {
   error?: string
 }
 
+// Token getter function - set by auth provider
+let getAccessToken: (() => Promise<string | null>) | null = null
+
+export function setAuthTokenGetter(getter: () => Promise<string | null>) {
+  getAccessToken = getter
+}
+
 async function request<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<ApiResponse<T>> {
   try {
+    // Get auth token if available
+    const token = getAccessToken ? await getAccessToken() : null
+    
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...(options.headers as Record<string, string> || {}),
+    }
+    
+    // Add authorization header if token exists
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
+    
     const response = await fetch(`${API_BASE}${endpoint}`, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
       ...options,
+      headers,
     })
 
     if (!response.ok) {
+      // Handle 401 Unauthorized
+      if (response.status === 401) {
+        return { 
+          success: false, 
+          error: 'Please sign in to continue' 
+        }
+      }
       const errorData = await response.json().catch(() => ({}))
       return { 
         success: false, 
@@ -166,4 +190,5 @@ export default {
   checkAllPrices,
   testNotification,
   searchStores,
+  setAuthTokenGetter,
 }

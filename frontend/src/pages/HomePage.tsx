@@ -1,12 +1,23 @@
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { TrendingDown, Bell, Shield, Zap, ArrowRight } from 'lucide-react'
+import { useAuth } from '../auth'
 
 export default function HomePage() {
   const navigate = useNavigate()
+  const { isAuthenticated, login, isLoading } = useAuth()
 
-  const handleGetStarted = () => {
-    navigate('/dashboard')
+  const handleGetStarted = async () => {
+    if (isAuthenticated) {
+      navigate('/dashboard')
+    } else {
+      try {
+        await login()
+        navigate('/dashboard')
+      } catch (error) {
+        console.error('Login failed:', error)
+      }
+    }
   }
 
   return (
@@ -53,9 +64,10 @@ export default function HomePage() {
           >
             <button
               onClick={handleGetStarted}
-              className="inline-flex items-center gap-2 px-8 py-4 bg-gray-900 text-white text-lg font-medium rounded-2xl hover:bg-gray-800 transition-all shadow-xl shadow-gray-900/20 hover:shadow-gray-900/30 hover:scale-105"
+              disabled={isLoading}
+              className="inline-flex items-center gap-2 px-8 py-4 bg-gray-900 text-white text-lg font-medium rounded-2xl hover:bg-gray-800 transition-all shadow-xl shadow-gray-900/20 hover:shadow-gray-900/30 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Get Started
+              {isAuthenticated ? 'Go to Dashboard' : 'Get Started'}
               <ArrowRight className="w-5 h-5" />
             </button>
           </motion.div>

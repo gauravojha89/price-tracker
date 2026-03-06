@@ -1,4 +1,5 @@
 const { CosmosClient } = require('@azure/cosmos');
+const { getAuthenticatedUser, requireAuth } = require('../shared/auth');
 
 // Initialize Cosmos client lazily
 let container = null;
@@ -19,23 +20,17 @@ async function getContainer() {
   return container;
 }
 
-// Get user info from request headers
-function getUserInfo(req) {
-  const clientPrincipal = req.headers['x-ms-client-principal'];
-  if (clientPrincipal) {
-    const decoded = JSON.parse(Buffer.from(clientPrincipal, 'base64').toString('utf8'));
-    return {
-      userId: decoded.userId || decoded.userDetails,
-      email: decoded.userDetails,
-      provider: decoded.identityProvider
-    };
-  }
-  return { userId: 'demo-user', email: 'demo@example.com', provider: 'demo' };
-}
-
 module.exports = async function (context, req) {
   const method = req.method.toUpperCase();
-  const userInfo = getUserInfo(req);
+  
+  // Require authentication
+  const authError = await requireAuth(req, context);
+  if (authError) {
+    context.res = authError;
+    return;
+  }
+  
+  const userInfo = await getAuthenticatedUser(req, context);
 
   try {
     switch (method) {
@@ -61,7 +56,7 @@ module.exports = async function (context, req) {
 async function getProfile(context, userInfo) {
   try {
     const container = await getContainer();
-    const { resource } = await container.item(userInfo.userId, userInfo.userId).read();
+    const { resource } = await container.item(userInfo.id, userInfo.id).read();
     
     context.res = {
       status: 200,
@@ -84,12 +79,10 @@ async function updateProfile(context, req, userInfo) {
   const notificationEmail = updates.email || userInfo.email;
   
   const profile = {
-    id: userInfo.userId,
+    id: userInfo.id,
     authEmail: userInfo.email,
     email: notificationEmail, // This is where notifications will be sent
-    name: updates.name || '',
-    phoneNumber: updates.phoneNumber || null,
-    notificationPreference: updates.notificationPreference || 'email',
+    name: updates.name || userInfo.name || '',
     emailNotifications: updates.emailNotifications !== false, // Default true
     updatedAt: new Date().toISOString()
   };
@@ -114,11 +107,10 @@ async function updateProfile(context, req, userInfo) {
 
 function createDefaultProfile(userInfo) {
   return {
-    id: userInfo.userId,
+    id: userInfo.id,
     email: userInfo.email,
-    name: '',
-    phoneNumber: null,
-    notificationPreference: 'email',
+    name: userInfo.name || '',
+    emailNotifications: true,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };

@@ -1,4 +1,5 @@
 const { CosmosClient } = require('@azure/cosmos');
+const { getUserId, requireAuth } = require('../shared/auth');
 
 // Initialize Cosmos client lazily
 let container = null;
@@ -19,21 +20,18 @@ async function getContainer() {
   return container;
 }
 
-// Get user ID from request headers (set by SWA authentication)
-function getUserId(req) {
-  const clientPrincipal = req.headers['x-ms-client-principal'];
-  if (clientPrincipal) {
-    const decoded = JSON.parse(Buffer.from(clientPrincipal, 'base64').toString('utf8'));
-    return decoded.userId || decoded.userDetails;
-  }
-  // For demo/development, use a default user
-  return 'demo-user';
-}
-
 module.exports = async function (context, req) {
   const method = req.method.toUpperCase();
   const productId = req.params.id;
-  const userId = getUserId(req);
+  
+  // Require authentication
+  const authError = await requireAuth(req, context);
+  if (authError) {
+    context.res = authError;
+    return;
+  }
+  
+  const userId = await getUserId(req, context);
 
   try {
     switch (method) {
