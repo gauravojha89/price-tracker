@@ -1,6 +1,10 @@
 {
   "routes": [
     {
+      "route": "/.auth/*",
+      "allowedRoles": ["anonymous", "authenticated"]
+    },
+    {
       "route": "/api/*",
       "allowedRoles": ["authenticated"]
     },
@@ -17,10 +21,6 @@
     "401": {
       "redirect": "/.auth/login/aad?post_login_redirect_uri=/dashboard",
       "statusCode": 302
-    },
-    "404": {
-      "rewrite": "/index.html",
-      "statusCode": 200
     }
   },
   "navigationFallback": {
