@@ -12,71 +12,109 @@ A price tracking application that monitors product prices across major retail st
 
 ```mermaid
 flowchart TB
-    subgraph Frontend["Frontend (React SPA)"]
-        UI[React 18 + TypeScript]
-        VITE[Vite 5 Build Tool]
-        TAILWIND[Tailwind CSS]
-        FRAMER[Framer Motion]
+    subgraph Users["👤 Users"]
+        BROWSER[Web Browser]
     end
 
-    subgraph AzureSWA["Azure Static Web Apps (Free Tier)"]
-        SWA[Static Web App Host]
-        API[Serverless API Functions]
+    subgraph GitHub["GitHub"]
+        REPO[("📦 Repository<br/>gauravojha89/price-tracker")]
+        ACTIONS["⚙️ GitHub Actions<br/>CI/CD Pipeline"]
+        OIDC["🔑 OIDC Token"]
     end
 
-    subgraph APIs["Backend API Functions (Node.js 20)"]
-        PRODUCTS["/api/products<br/>CRUD Operations"]
-        CHECKPRICE["/api/check-price<br/>Price Scraping"]
-        CHECKALL["/api/check-all-prices<br/>Batch Processing"]
-        NOTIFY["/api/notifications<br/>Email Alerts"]
-        SEARCH["/api/search-stores<br/>Cross-Store Search"]
-        PROFILE["/api/user/profile<br/>User Management"]
+    subgraph Azure["☁️ Azure Cloud"]
+        subgraph Identity["🔐 Identity & Security"]
+            SWA_AUTH["SWA Built-in Auth<br/>/.auth/login/aad"]
+            MI["🪪 Managed Identity<br/>User-Assigned"]
+            FIC["🔗 Federated Identity<br/>Credential"]
+        end
+
+        subgraph Hosting["🌐 Azure Static Web Apps (Free)"]
+            SWA["Static Web App<br/>delightful-glacier-06ac71a1e"]
+            subgraph Frontend["React SPA"]
+                REACT["⚛️ React 18 + TypeScript<br/>Vite 5 + Tailwind CSS"]
+            end
+            subgraph Functions["Serverless Functions"]
+                API_PRODUCTS["📦 /api/products"]
+                API_CHECK["🔍 /api/check-price"]
+                API_SEARCH["🔎 /api/search-stores"]
+                API_NOTIFY["📧 /api/notifications"]
+                API_USER["👤 /api/user"]
+            end
+        end
+
+        subgraph Data["💾 Data Layer"]
+            COSMOS[("🗄️ Cosmos DB<br/>Serverless (Free Tier)<br/>NoSQL API")]
+            PRODUCTS_DB["products container"]
+            USERS_DB["users container"]
+        end
+
+        subgraph Comms["📬 Communication"]
+            ACS["📧 Azure Communication<br/>Services"]
+            EMAIL["✉️ Email Service<br/>DoNotReply@...azurecomm.net"]
+        end
     end
 
-    subgraph AzureDB["Azure Cosmos DB (Free Tier)"]
-        COSMOS[(Cosmos DB)]
-        PRODUCTS_COLL[products collection]
-        USERS_COLL[users collection]
+    subgraph External["🏪 External Retailers"]
+        AMAZON["Amazon"]
+        WALMART["Walmart"]
+        TARGET["Target"]
+        BESTBUY["Best Buy"]
+        EBAY["eBay"]
+        MORE["+ 5 more stores"]
     end
 
-    subgraph AzureComm["Azure Communication Services"]
-        ACS[Email Service]
-        SENDER[DoNotReply@azurecomm.net]
-    end
+    %% User Flow
+    BROWSER -->|"HTTPS"| SWA
+    SWA -->|"Serves"| REACT
+    BROWSER -->|"Microsoft Login"| SWA_AUTH
+    SWA_AUTH -->|"x-ms-client-principal"| Functions
 
-    subgraph External["External Services"]
-        STORES[Retail Store Websites<br/>Amazon, Walmart, Target,<br/>Best Buy, eBay, etc.]
-    end
+    %% API Flow
+    REACT -->|"REST API"| Functions
+    API_PRODUCTS -->|"DefaultAzureCredential"| COSMOS
+    API_CHECK -->|"DefaultAzureCredential"| COSMOS
+    API_USER -->|"DefaultAzureCredential"| COSMOS
+    COSMOS --- PRODUCTS_DB
+    COSMOS --- USERS_DB
 
-    subgraph CICD["CI/CD Pipeline"]
-        GITHUB[GitHub Repository]
-        ACTIONS[GitHub Actions]
-    end
+    %% Price Checking
+    API_CHECK -->|"Web Scraping"| External
+    API_SEARCH -->|"Cross-Store Search"| External
 
-    UI --> SWA
-    SWA --> API
-    API --> PRODUCTS
-    API --> CHECKPRICE
-    API --> CHECKALL
-    API --> NOTIFY
-    API --> SEARCH
-    API --> PROFILE
+    %% Notifications
+    API_NOTIFY -->|"Managed Identity"| ACS
+    ACS --> EMAIL
 
-    PRODUCTS --> COSMOS
-    CHECKPRICE --> COSMOS
-    CHECKALL --> COSMOS
-    PROFILE --> COSMOS
-    COSMOS --> PRODUCTS_COLL
-    COSMOS --> USERS_COLL
+    %% CI/CD Flow
+    REPO -->|"Push to main"| ACTIONS
+    ACTIONS -->|"OIDC Auth"| OIDC
+    OIDC -->|"Federated Auth"| FIC
+    FIC -->|"Grants Access"| MI
+    ACTIONS -->|"Deploy"| SWA
 
-    CHECKPRICE --> STORES
-    CHECKALL --> STORES
-    CHECKALL --> ACS
-    ACS --> SENDER
+    %% Styling
+    classDef azure fill:#0078D4,stroke:#005A9E,color:#fff
+    classDef security fill:#107C10,stroke:#0B5C0B,color:#fff
+    classDef external fill:#FF9900,stroke:#CC7A00,color:#fff
+    classDef github fill:#24292E,stroke:#1B1F23,color:#fff
 
-    GITHUB --> ACTIONS
-    ACTIONS --> SWA
+    class SWA,COSMOS,ACS,EMAIL azure
+    class SWA_AUTH,MI,FIC security
+    class AMAZON,WALMART,TARGET,BESTBUY,EBAY,MORE external
+    class REPO,ACTIONS,OIDC github
 ```
+
+### Security Model
+
+| Component | Security Mechanism | Details |
+|-----------|-------------------|---------|
+| **User Authentication** | SWA Built-in Auth | Microsoft Entra ID via `/.auth/login/aad` |
+| **API Authorization** | x-ms-client-principal | Automatic header injection by SWA |
+| **Cosmos DB Access** | Managed Identity | `DefaultAzureCredential` - no connection strings |
+| **Email Service** | Managed Identity | Azure Communication Services via MI |
+| **CI/CD Pipeline** | Federated Identity Credentials | OIDC keyless auth from GitHub Actions |
+| **Secrets** | None in code | Zero hardcoded credentials anywhere |
 
 ---
 
