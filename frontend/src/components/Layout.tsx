@@ -15,7 +15,8 @@ export default function Layout({ children }: LayoutProps) {
   const isActive = (path: string) => location.pathname === path
 
   const handleLogin = () => {
-    login('aad', '/dashboard') // Use Microsoft login, redirect to dashboard
+    // Sign in and return to current page (not dashboard)
+    login('aad')
   }
 
   const handleLogout = () => {
