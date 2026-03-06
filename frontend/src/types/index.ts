@@ -2,8 +2,7 @@ export interface User {
   id: string
   email: string
   name: string
-  phoneNumber?: string | null
-  notificationPreference: 'email' | 'sms' | 'both'
+  emailNotifications?: boolean
   createdAt?: string
   updatedAt?: string
 }
@@ -39,8 +38,6 @@ export interface CreateProductRequest {
 export interface UpdateUserRequest {
   name?: string
   email?: string
-  phoneNumber?: string
-  notificationPreference?: 'email' | 'sms' | 'both'
   emailNotifications?: boolean
 }
 

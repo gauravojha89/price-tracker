@@ -1,6 +1,6 @@
 import { useState, useEffect, FormEvent } from 'react'
 import { motion } from 'framer-motion'
-import { User, Mail, Phone, Bell, Save, Loader2, CheckCircle, Send } from 'lucide-react'
+import { User, Mail, Bell, Save, Loader2, CheckCircle, Send } from 'lucide-react'
 import LoadingSpinner from '../components/LoadingSpinner'
 import api from '../services/simpleApi'
 import type { User as UserType, UpdateUserRequest } from '../types'
@@ -17,8 +17,7 @@ export default function ProfilePage() {
   // Form state
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
-  const [phoneNumber, setPhoneNumber] = useState('')
-  const [notificationPreference, setNotificationPreference] = useState<'email' | 'sms' | 'both'>('email')
+  const [emailNotifications, setEmailNotifications] = useState(true)
 
   useEffect(() => {
     fetchProfile()
@@ -31,8 +30,7 @@ export default function ProfilePage() {
       setUser(result.data)
       setName(result.data.name || '')
       setEmail(result.data.email || '')
-      setPhoneNumber(result.data.phoneNumber || '')
-      setNotificationPreference(result.data.notificationPreference || 'email')
+      setEmailNotifications(result.data.emailNotifications !== false)
     }
     setLoading(false)
   }
@@ -50,18 +48,10 @@ export default function ProfilePage() {
       return
     }
 
-    // Phone number validation
-    if (phoneNumber && !/^\+?[1-9]\d{9,14}$/.test(phoneNumber.replace(/[\s-]/g, ''))) {
-      setError('Please enter a valid phone number')
-      setSaving(false)
-      return
-    }
-
     const data: UpdateUserRequest = {
       name: name.trim(),
       email: email.trim(),
-      phoneNumber: phoneNumber.trim() || undefined,
-      notificationPreference,
+      emailNotifications,
     }
 
     const result = await api.updateProfile(data)
@@ -178,63 +168,34 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Phone Number */}
-          <div>
-            <label
-              htmlFor="phone"
-              className="block text-sm font-medium text-gray-700 mb-1.5"
-            >
-              Phone Number{' '}
-              <span className="text-gray-400 font-normal">(for SMS alerts)</span>
-            </label>
-            <div className="relative">
-              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                id="phone"
-                type="tel"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                placeholder="+1 (555) 123-4567"
-                className="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
-              />
-            </div>
-          </div>
-
-          {/* Notification Preference */}
+          {/* Email Notifications */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">
               <span className="flex items-center gap-2">
                 <Bell className="w-4 h-4" />
-                Notification Preference
+                Email Notifications
               </span>
             </label>
-            <div className="grid grid-cols-3 gap-3">
-              <NotificationOption
-                value="email"
-                label="Email Only"
-                selected={notificationPreference === 'email'}
-                onChange={() => setNotificationPreference('email')}
-              />
-              <NotificationOption
-                value="sms"
-                label="SMS Only"
-                selected={notificationPreference === 'sms'}
-                onChange={() => setNotificationPreference('sms')}
-                disabled={!phoneNumber}
-              />
-              <NotificationOption
-                value="both"
-                label="Both"
-                selected={notificationPreference === 'both'}
-                onChange={() => setNotificationPreference('both')}
-                disabled={!phoneNumber}
-              />
-            </div>
-            {!phoneNumber && (
-              <p className="mt-2 text-xs text-gray-500">
-                Add a phone number to enable SMS notifications
-              </p>
-            )}
+            <label className="flex items-center gap-3 cursor-pointer">
+              <div className="relative">
+                <input
+                  type="checkbox"
+                  checked={emailNotifications}
+                  onChange={(e) => setEmailNotifications(e.target.checked)}
+                  className="sr-only"
+                />
+                <div className={`w-11 h-6 rounded-full transition-colors ${
+                  emailNotifications ? 'bg-primary-600' : 'bg-gray-300'
+                }`}>
+                  <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                    emailNotifications ? 'translate-x-5' : 'translate-x-0'
+                  }`} />
+                </div>
+              </div>
+              <span className="text-sm text-gray-700">
+                {emailNotifications ? 'Enabled' : 'Disabled'} - Get notified when prices drop
+              </span>
+            </label>
           </div>
 
           {/* Error */}
@@ -284,36 +245,5 @@ export default function ProfilePage() {
         </p>
       </div>
     </div>
-  )
-}
-
-function NotificationOption({
-  value: _value,
-  label,
-  selected,
-  onChange,
-  disabled,
-}: {
-  value: string
-  label: string
-  selected: boolean
-  onChange: () => void
-  disabled?: boolean
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onChange}
-      disabled={disabled}
-      className={`py-3 px-4 rounded-xl border-2 text-sm font-medium transition-all ${
-        selected
-          ? 'border-primary-500 bg-primary-50 text-primary-700'
-          : disabled
-          ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
-          : 'border-gray-200 text-gray-600 hover:border-gray-300'
-      }`}
-    >
-      {label}
-    </button>
   )
 }

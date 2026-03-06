@@ -92,8 +92,6 @@ export async function getProfile(): Promise<ApiResponse<User>> {
 export async function updateProfile(data: {
   name?: string
   email?: string
-  phoneNumber?: string
-  notificationPreference?: 'email' | 'sms' | 'both'
   emailNotifications?: boolean
 }): Promise<ApiResponse<User>> {
   return request<User>('/user/profile', {
