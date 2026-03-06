@@ -80,12 +80,17 @@ async function getProfile(context, userInfo) {
 async function updateProfile(context, req, userInfo) {
   const updates = req.body || {};
   
+  // Allow user to set their own notification email
+  const notificationEmail = updates.email || userInfo.email;
+  
   const profile = {
     id: userInfo.userId,
-    email: userInfo.email,
+    authEmail: userInfo.email,
+    email: notificationEmail, // This is where notifications will be sent
     name: updates.name || '',
     phoneNumber: updates.phoneNumber || null,
     notificationPreference: updates.notificationPreference || 'email',
+    emailNotifications: updates.emailNotifications !== false, // Default true
     updatedAt: new Date().toISOString()
   };
 

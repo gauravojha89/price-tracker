@@ -1,11 +1,11 @@
 import { useState, FormEvent } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Link, Package, Loader2 } from 'lucide-react'
+import { X, Link, Package, Loader2, DollarSign } from 'lucide-react'
 
 interface AddProductModalProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit: (data: { name: string; url?: string }) => Promise<void>
+  onSubmit: (data: { name: string; url?: string; targetPrice?: number }) => Promise<void>
 }
 
 export default function AddProductModal({
@@ -15,6 +15,7 @@ export default function AddProductModal({
 }: AddProductModalProps) {
   const [name, setName] = useState('')
   const [url, setUrl] = useState('')
+  const [targetPrice, setTargetPrice] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -37,14 +38,23 @@ export default function AddProductModal({
       }
     }
 
+    // Target price validation
+    const parsedPrice = targetPrice ? parseFloat(targetPrice) : undefined
+    if (targetPrice && (isNaN(parsedPrice!) || parsedPrice! <= 0)) {
+      setError('Please enter a valid target price')
+      return
+    }
+
     setLoading(true)
     try {
       await onSubmit({
         name: name.trim(),
         url: url.trim() || undefined,
+        targetPrice: parsedPrice,
       })
       setName('')
       setUrl('')
+      setTargetPrice('')
       onClose()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add product')
@@ -57,6 +67,7 @@ export default function AddProductModal({
     if (!loading) {
       setName('')
       setUrl('')
+      setTargetPrice('')
       setError('')
       onClose()
     }
@@ -143,7 +154,35 @@ export default function AddProductModal({
                     />
                   </div>
                   <p className="mt-1.5 text-xs text-gray-500">
-                    Supported stores: Amazon, Best Buy, Target, Walmart, Costco
+                    Supported stores: Amazon, Best Buy, Target, Walmart, Costco, Home Depot, Lowes, Newegg, B&H Photo
+                  </p>
+                </div>
+
+                {/* Target Price */}
+                <div>
+                  <label
+                    htmlFor="targetPrice"
+                    className="block text-sm font-medium text-gray-700 mb-1.5"
+                  >
+                    Target Price{' '}
+                    <span className="text-gray-400 font-normal">(alert me when below this)</span>
+                  </label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <input
+                      id="targetPrice"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={targetPrice}
+                      onChange={(e) => setTargetPrice(e.target.value)}
+                      placeholder="e.g., 899.99"
+                      className="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                      disabled={loading}
+                    />
+                  </div>
+                  <p className="mt-1.5 text-xs text-gray-500">
+                    You'll get an email notification when the price drops below this amount
                   </p>
                 </div>
 

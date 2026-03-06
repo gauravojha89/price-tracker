@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Package, Search } from 'lucide-react'
+import { Plus, Package, Search, RefreshCw } from 'lucide-react'
 import ProductCard from '../components/ProductCard'
 import AddProductModal from '../components/AddProductModal'
 import LoadingSpinner from '../components/LoadingSpinner'
@@ -33,7 +33,7 @@ export default function DashboardPage() {
   }, [fetchProducts])
 
   // Add product handler
-  const handleAddProduct = async (data: { name: string; url?: string }) => {
+  const handleAddProduct = async (data: { name: string; url?: string; targetPrice?: number }) => {
     const result = await api.createProduct(data)
     if (result.success && result.data) {
       setProducts((prev) => [result.data!, ...prev])
@@ -54,16 +54,25 @@ export default function DashboardPage() {
   const handleRefresh = async (id: string) => {
     setRefreshingIds((prev) => new Set(prev).add(id))
     const result = await api.refreshPrice(id)
-    if (result.success && result.data) {
-      setProducts((prev) =>
-        prev.map((p) => (p.id === id ? result.data! : p))
-      )
+    if (result.success) {
+      // Refetch all products to get updated data
+      await fetchProducts()
     }
     setRefreshingIds((prev) => {
       const next = new Set(prev)
       next.delete(id)
       return next
     })
+  }
+
+  // Check all prices handler
+  const handleCheckAllPrices = async () => {
+    setLoading(true)
+    const result = await api.checkAllPrices()
+    if (result.success) {
+      await fetchProducts()
+    }
+    setLoading(false)
   }
 
   // Filter products by search
@@ -96,13 +105,25 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white font-medium rounded-xl hover:bg-gray-800 transition-colors shadow-lg shadow-gray-900/20"
-        >
-          <Plus className="w-5 h-5" />
-          Track Product
-        </button>
+        <div className="flex gap-3">
+          {products.length > 0 && (
+            <button
+              onClick={handleCheckAllPrices}
+              disabled={loading}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-white text-gray-700 font-medium rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              Check All
+            </button>
+          )}
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white font-medium rounded-xl hover:bg-gray-800 transition-colors shadow-lg shadow-gray-900/20"
+          >
+            <Plus className="w-5 h-5" />
+            Track Product
+          </button>
+        </div>
       </div>
 
       {/* Error message */}

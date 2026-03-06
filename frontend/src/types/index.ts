@@ -38,8 +38,10 @@ export interface CreateProductRequest {
 
 export interface UpdateUserRequest {
   name?: string
+  email?: string
   phoneNumber?: string
   notificationPreference?: 'email' | 'sms' | 'both'
+  emailNotifications?: boolean
 }
 
 export interface ApiResponse<T> {

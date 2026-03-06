@@ -70,25 +70,73 @@ export async function deleteProduct(id: string): Promise<ApiResponse<void>> {
   })
 }
 
-export async function refreshPrice(id: string): Promise<ApiResponse<Product>> {
-  return request<Product>(`/products/${id}/refresh`, {
+export async function refreshPrice(id: string): Promise<ApiResponse<{
+  success: boolean
+  currentPrice?: number
+  previousPrice?: number
+  isOnSale?: boolean
+  productUpdated?: boolean
+  error?: string
+}>> {
+  return request('/check-price', {
     method: 'POST',
+    body: JSON.stringify({ productId: id }),
   })
 }
 
 // User Profile API
 export async function getProfile(): Promise<ApiResponse<User>> {
-  return request<User>('/user/profile')
+  return request<User>('/user')
 }
 
 export async function updateProfile(data: {
   name?: string
+  email?: string
   phoneNumber?: string
   notificationPreference?: 'email' | 'sms' | 'both'
+  emailNotifications?: boolean
 }): Promise<ApiResponse<User>> {
-  return request<User>('/user/profile', {
+  return request<User>('/user', {
     method: 'PUT',
     body: JSON.stringify(data),
+  })
+}
+
+// Price checking
+export async function checkPrice(productId: string): Promise<ApiResponse<{
+  success: boolean
+  price?: number
+  previousPrice?: number
+  isOnSale?: boolean
+  notificationSent?: boolean
+  error?: string
+}>> {
+  return request('/check-price', {
+    method: 'POST',
+    body: JSON.stringify({ productId }),
+  })
+}
+
+export async function checkAllPrices(): Promise<ApiResponse<{
+  checked: number
+  updated: number
+  priceDrops: number
+  notificationsSent: number
+  errors: number
+}>> {
+  return request('/check-all-prices', {
+    method: 'POST',
+    body: JSON.stringify({}),
+  })
+}
+
+export async function testNotification(email: string): Promise<ApiResponse<{
+  success: boolean
+  message: string
+}>> {
+  return request('/notifications/test', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
   })
 }
 
@@ -99,4 +147,7 @@ export default {
   refreshPrice,
   getProfile,
   updateProfile,
+  checkPrice,
+  checkAllPrices,
+  testNotification,
 }

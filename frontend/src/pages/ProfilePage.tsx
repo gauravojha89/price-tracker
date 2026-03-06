@@ -1,6 +1,6 @@
 import { useState, useEffect, FormEvent } from 'react'
 import { motion } from 'framer-motion'
-import { User, Mail, Phone, Bell, Save, Loader2, CheckCircle } from 'lucide-react'
+import { User, Mail, Phone, Bell, Save, Loader2, CheckCircle, Send } from 'lucide-react'
 import LoadingSpinner from '../components/LoadingSpinner'
 import api from '../services/simpleApi'
 import type { User as UserType, UpdateUserRequest } from '../types'
@@ -11,14 +11,14 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [testingEmail, setTestingEmail] = useState(false)
+  const [testSent, setTestSent] = useState(false)
 
   // Form state
   const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
   const [notificationPreference, setNotificationPreference] = useState<'email' | 'sms' | 'both'>('email')
-
-  // Get email from user profile
-  const email = user?.email || 'demo@example.com'
 
   useEffect(() => {
     fetchProfile()
@@ -30,6 +30,7 @@ export default function ProfilePage() {
     if (result.success && result.data) {
       setUser(result.data)
       setName(result.data.name || '')
+      setEmail(result.data.email || '')
       setPhoneNumber(result.data.phoneNumber || '')
       setNotificationPreference(result.data.notificationPreference || 'email')
     }
@@ -42,6 +43,13 @@ export default function ProfilePage() {
     setSaving(true)
     setSaved(false)
 
+    // Email validation
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError('Please enter a valid email address')
+      setSaving(false)
+      return
+    }
+
     // Phone number validation
     if (phoneNumber && !/^\+?[1-9]\d{9,14}$/.test(phoneNumber.replace(/[\s-]/g, ''))) {
       setError('Please enter a valid phone number')
@@ -51,6 +59,7 @@ export default function ProfilePage() {
 
     const data: UpdateUserRequest = {
       name: name.trim(),
+      email: email.trim(),
       phoneNumber: phoneNumber.trim() || undefined,
       notificationPreference,
     }
@@ -64,6 +73,23 @@ export default function ProfilePage() {
       setError(result.error || 'Failed to update profile')
     }
     setSaving(false)
+  }
+
+  const handleTestNotification = async () => {
+    if (!email) {
+      setError('Please enter an email address first')
+      return
+    }
+    setTestingEmail(true)
+    setError(null)
+    const result = await api.testNotification(email)
+    if (result.success) {
+      setTestSent(true)
+      setTimeout(() => setTestSent(false), 5000)
+    } else {
+      setError(result.error || 'Failed to send test notification')
+    }
+    setTestingEmail(false)
   }
 
   if (loading) {
@@ -106,13 +132,13 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Email (read-only) */}
+          {/* Email (editable - for notifications) */}
           <div>
             <label
               htmlFor="email"
               className="block text-sm font-medium text-gray-700 mb-1.5"
             >
-              Email Address
+              Notification Email
             </label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -120,13 +146,36 @@ export default function ProfilePage() {
                 id="email"
                 type="email"
                 value={email}
-                disabled
-                className="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-500 cursor-not-allowed"
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                className="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
               />
             </div>
-            <p className="mt-1 text-xs text-gray-500">
-              Email is managed through your Microsoft account
-            </p>
+            <div className="flex items-center justify-between mt-2">
+              <p className="text-xs text-gray-500">
+                Price alerts will be sent to this email
+              </p>
+              <button
+                type="button"
+                onClick={handleTestNotification}
+                disabled={testingEmail || !email}
+                className="text-xs text-primary-600 hover:text-primary-700 font-medium disabled:opacity-50 flex items-center gap-1"
+              >
+                {testingEmail ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : testSent ? (
+                  <>
+                    <CheckCircle className="w-3 h-3 text-green-600" />
+                    <span className="text-green-600">Sent! Check inbox</span>
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-3 h-3" />
+                    Send test email
+                  </>
+                )}
+              </button>
+            </div>
           </div>
 
           {/* Phone Number */}
