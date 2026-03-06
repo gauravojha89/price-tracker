@@ -1,8 +1,9 @@
-import { ReactNode } from 'react'
+import { ReactNode, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { TrendingDown, User, LayoutDashboard, LogIn, LogOut } from 'lucide-react'
 import { useAuth } from '../auth'
+import LoginModal from './LoginModal'
 
 interface LayoutProps {
   children: ReactNode
@@ -10,14 +11,10 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   const location = useLocation()
-  const { isAuthenticated, user, login, logout, isLoading } = useAuth()
+  const { isAuthenticated, user, logout, isLoading } = useAuth()
+  const [showLoginModal, setShowLoginModal] = useState(false)
 
   const isActive = (path: string) => location.pathname === path
-
-  const handleLogin = () => {
-    // Sign in with GitHub and return to current page
-    login('github')
-  }
 
   const handleLogout = () => {
     logout()
@@ -64,7 +61,7 @@ export default function Layout({ children }: LayoutProps) {
                 </>
               ) : (
                 <button
-                  onClick={handleLogin}
+                  onClick={() => setShowLoginModal(true)}
                   disabled={isLoading}
                   className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50"
                 >
@@ -76,6 +73,12 @@ export default function Layout({ children }: LayoutProps) {
           </div>
         </div>
       </header>
+
+      {/* Login Modal */}
+      <LoginModal 
+        isOpen={showLoginModal} 
+        onClose={() => setShowLoginModal(false)} 
+      />
 
       {/* Main Content */}
       <main className="flex-1">

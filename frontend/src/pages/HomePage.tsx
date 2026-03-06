@@ -1,18 +1,20 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { TrendingDown, Bell, Shield, Zap, ArrowRight } from 'lucide-react'
 import { useAuth } from '../auth'
+import LoginModal from '../components/LoginModal'
 
 export default function HomePage() {
   const navigate = useNavigate()
-  const { isAuthenticated, login, isLoading } = useAuth()
+  const { isAuthenticated, isLoading } = useAuth()
+  const [showLoginModal, setShowLoginModal] = useState(false)
 
   const handleGetStarted = () => {
     if (isAuthenticated) {
       navigate('/dashboard')
     } else {
-      // Redirect to GitHub login (works on SWA Free tier)
-      login('github', '/dashboard')
+      setShowLoginModal(true)
     }
   }
 
@@ -120,6 +122,13 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Login Modal */}
+      <LoginModal 
+        isOpen={showLoginModal} 
+        onClose={() => setShowLoginModal(false)}
+        redirectTo="/dashboard"
+      />
     </div>
   )
 }

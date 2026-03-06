@@ -38,12 +38,13 @@ export async function getAuthInfo(): Promise<AuthInfo> {
 
 /**
  * Login with specified provider
- * Note: On SWA Free tier, only 'github' and 'twitter' are available
- * 'aad' (Microsoft) requires Standard tier
+ * Note: Available providers depend on SWA tier and configuration
+ * - Free tier: github, twitter
+ * - Standard tier: aad (Microsoft), apple, github, twitter, custom OIDC
  * @param provider - The identity provider to use
  * @param redirectTo - Optional URL to redirect to after login (defaults to current page)
  */
-export function login(provider: 'aad' | 'github' | 'twitter' = 'github', redirectTo?: string) {
+export function login(provider: 'aad' | 'apple' | 'github' | 'twitter' = 'aad', redirectTo?: string) {
   const redirect = redirectTo || window.location.pathname
   window.location.href = `/.auth/login/${provider}?post_login_redirect_uri=${encodeURIComponent(redirect)}`
 }
