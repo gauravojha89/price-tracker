@@ -6,7 +6,7 @@ import api from '../services/simpleApi'
 import type { User as UserType, UpdateUserRequest } from '../types'
 
 export default function ProfilePage() {
-  const [user, setUser] = useState<UserType | null>(null)
+  const [_user, setUser] = useState<UserType | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
