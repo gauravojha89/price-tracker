@@ -53,11 +53,23 @@ export default function DashboardPage() {
   // Refresh price handler
   const handleRefresh = async (id: string) => {
     setRefreshingIds((prev) => new Set(prev).add(id))
+    setError(null)  // Clear previous errors
+    
     const result = await api.refreshPrice(id)
-    if (result.success) {
-      // Refetch all products to get updated data
-      await fetchProducts()
+    
+    if (result.success && result.data) {
+      // Check if the scraper actually succeeded
+      if (result.data.success) {
+        // Refetch all products to get updated data
+        await fetchProducts()
+      } else {
+        // Scraping failed - show error to user
+        setError(result.data.error || 'Could not check price. The website may have changed or blocked our request.')
+      }
+    } else {
+      setError(result.error || 'Failed to check price')
     }
+    
     setRefreshingIds((prev) => {
       const next = new Set(prev)
       next.delete(id)
