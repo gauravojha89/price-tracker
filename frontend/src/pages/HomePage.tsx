@@ -11,8 +11,8 @@ export default function HomePage() {
     if (isAuthenticated) {
       navigate('/dashboard')
     } else {
-      // Redirect to Microsoft login - will go to dashboard after auth
-      login('aad', '/dashboard')
+      // Redirect to GitHub login (works on SWA Free tier)
+      login('github', '/dashboard')
     }
   }
 

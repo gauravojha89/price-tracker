@@ -15,8 +15,8 @@ export default function Layout({ children }: LayoutProps) {
   const isActive = (path: string) => location.pathname === path
 
   const handleLogin = () => {
-    // Sign in and return to current page (not dashboard)
-    login('aad')
+    // Sign in with GitHub and return to current page
+    login('github')
   }
 
   const handleLogout = () => {
