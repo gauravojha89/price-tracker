@@ -86,7 +86,7 @@ export async function refreshPrice(id: string): Promise<ApiResponse<{
 
 // User Profile API
 export async function getProfile(): Promise<ApiResponse<User>> {
-  return request<User>('/user')
+  return request<User>('/user/profile')
 }
 
 export async function updateProfile(data: {
@@ -96,7 +96,7 @@ export async function updateProfile(data: {
   notificationPreference?: 'email' | 'sms' | 'both'
   emailNotifications?: boolean
 }): Promise<ApiResponse<User>> {
-  return request<User>('/user', {
+  return request<User>('/user/profile', {
     method: 'PUT',
     body: JSON.stringify(data),
   })
