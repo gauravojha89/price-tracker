@@ -1,20 +1,18 @@
-import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { TrendingDown, Bell, Shield, Zap, ArrowRight } from 'lucide-react'
+import { TrendingDown, Bell, Shield, Zap, ArrowRight, ArrowDown } from 'lucide-react'
 import { useAuth } from '../auth'
-import LoginModal from '../components/LoginModal'
 
 export default function HomePage() {
   const navigate = useNavigate()
   const { isAuthenticated, isLoading } = useAuth()
-  const [showLoginModal, setShowLoginModal] = useState(false)
 
-  const handleGetStarted = () => {
+  const handleCTA = () => {
     if (isAuthenticated) {
       navigate('/dashboard')
     } else {
-      setShowLoginModal(true)
+      // Scroll to features section
+      document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })
     }
   }
 
@@ -61,19 +59,19 @@ export default function HomePage() {
             transition={{ duration: 0.6, delay: 0.3 }}
           >
             <button
-              onClick={handleGetStarted}
+              onClick={handleCTA}
               disabled={isLoading}
               className="inline-flex items-center gap-2 px-8 py-4 bg-gray-900 text-white text-lg font-medium rounded-2xl hover:bg-gray-800 transition-all shadow-xl shadow-gray-900/20 hover:shadow-gray-900/30 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isAuthenticated ? 'Go to Dashboard' : 'Get Started'}
-              <ArrowRight className="w-5 h-5" />
+              {isAuthenticated ? 'Go to Dashboard' : 'Learn More'}
+              {isAuthenticated ? <ArrowRight className="w-5 h-5" /> : <ArrowDown className="w-5 h-5" />}
             </button>
           </motion.div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section className="bg-white py-24 border-t border-gray-100">
+      <section id="features" className="bg-white py-24 border-t border-gray-100">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">
@@ -122,13 +120,6 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-
-      {/* Login Modal */}
-      <LoginModal 
-        isOpen={showLoginModal} 
-        onClose={() => setShowLoginModal(false)}
-        redirectTo="/dashboard"
-      />
     </div>
   )
 }
