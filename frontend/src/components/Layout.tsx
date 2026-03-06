@@ -14,20 +14,12 @@ export default function Layout({ children }: LayoutProps) {
 
   const isActive = (path: string) => location.pathname === path
 
-  const handleLogin = async () => {
-    try {
-      await login()
-    } catch (error) {
-      console.error('Login failed:', error)
-    }
+  const handleLogin = () => {
+    login('aad') // Use Microsoft login
   }
 
-  const handleLogout = async () => {
-    try {
-      await logout()
-    } catch (error) {
-      console.error('Logout failed:', error)
-    }
+  const handleLogout = () => {
+    logout()
   }
 
   return (
@@ -58,7 +50,7 @@ export default function Layout({ children }: LayoutProps) {
                   </NavLink>
                   <div className="ml-2 pl-2 border-l border-gray-200 flex items-center gap-3">
                     <span className="text-sm text-gray-600 hidden sm:block">
-                      {user?.name || user?.username}
+                      {user?.name || user?.email}
                     </span>
                     <button
                       onClick={handleLogout}

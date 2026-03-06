@@ -7,16 +7,12 @@ export default function HomePage() {
   const navigate = useNavigate()
   const { isAuthenticated, login, isLoading } = useAuth()
 
-  const handleGetStarted = async () => {
+  const handleGetStarted = () => {
     if (isAuthenticated) {
       navigate('/dashboard')
     } else {
-      try {
-        await login()
-        navigate('/dashboard')
-      } catch (error) {
-        console.error('Login failed:', error)
-      }
+      // Redirect to Microsoft login - will come back to dashboard after auth
+      login('aad')
     }
   }
 

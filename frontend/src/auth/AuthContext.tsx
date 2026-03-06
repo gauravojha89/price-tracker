@@ -1,167 +1,91 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
-import {
-  PublicClientApplication,
-  AccountInfo,
-  InteractionRequiredAuthError,
-  BrowserAuthError,
-} from '@azure/msal-browser'
-import { MsalProvider, useMsal, useIsAuthenticated } from '@azure/msal-react'
-import { msalConfig, loginRequest, apiRequest, isB2CConfigured } from './authConfig'
+import { getAuthInfo, login as swaLogin, logout as swaLogout, ClientPrincipal } from './swaAuth'
 import { setAuthTokenGetter } from '../services/simpleApi'
 
-// Initialize MSAL instance
-const msalInstance = new PublicClientApplication(msalConfig)
-
-// Initialize MSAL before rendering
-msalInstance.initialize().catch(console.error)
+interface User {
+  id: string
+  email: string
+  name: string
+  provider: string
+}
 
 interface AuthContextType {
-  user: AccountInfo | null
+  user: User | null
   isAuthenticated: boolean
   isLoading: boolean
-  login: () => Promise<void>
-  logout: () => Promise<void>
-  getAccessToken: () => Promise<string | null>
+  login: (provider?: 'aad' | 'github' | 'twitter') => void
+  logout: () => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 /**
- * Inner auth provider that uses MSAL hooks
+ * Convert SWA ClientPrincipal to User object
  */
-function AuthProviderInner({ children }: { children: ReactNode }) {
-  const { instance, accounts, inProgress } = useMsal()
-  const isAuthenticated = useIsAuthenticated()
+function clientPrincipalToUser(principal: ClientPrincipal): User {
+  return {
+    id: principal.userId,
+    email: principal.userDetails,
+    name: principal.claims?.find(c => c.typ === 'name')?.val || principal.userDetails,
+    provider: principal.identityProvider,
+  }
+}
+
+/**
+ * Auth provider using Azure Static Web Apps built-in authentication
+ */
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  const user = accounts[0] || null
-
-  /**
-   * Get access token for API calls
-   */
-  const getAccessToken = useCallback(async (): Promise<string | null> => {
-    const currentUser = accounts[0]
-    if (!currentUser) return null
-
-    try {
-      const response = await instance.acquireTokenSilent({
-        ...apiRequest,
-        account: currentUser,
-      })
-      return response.accessToken
-    } catch (error) {
-      if (error instanceof InteractionRequiredAuthError) {
-        try {
-          const response = await instance.acquireTokenPopup(apiRequest)
-          return response.accessToken
-        } catch (popupError) {
-          console.error('Token acquisition failed:', popupError)
-          return null
-        }
-      }
-      console.error('Token error:', error)
-      return null
-    }
-  }, [instance, accounts])
-
+  // Check auth status on mount
   useEffect(() => {
-    // Wait for MSAL to finish any in-progress operations
-    if (inProgress === 'none') {
-      setIsLoading(false)
-      // Register the token getter with the API service
-      setAuthTokenGetter(getAccessToken)
-    }
-  }, [inProgress, getAccessToken])
+    checkAuth()
+  }, [])
 
-  /**
-   * Trigger login popup
-   */
-  const login = async () => {
+  const checkAuth = async () => {
     try {
-      await instance.loginPopup(loginRequest)
-    } catch (error) {
-      // Handle password reset flow
-      if (error instanceof BrowserAuthError) {
-        const errorMessage = (error as BrowserAuthError).errorMessage
-        if (errorMessage?.includes('AADB2C90118')) {
-          // User clicked "Forgot Password" - redirect to password reset flow
-          // This would require implementing password reset authority
-          console.log('Password reset requested')
-        }
+      const authInfo = await getAuthInfo()
+      if (authInfo.clientPrincipal) {
+        setUser(clientPrincipalToUser(authInfo.clientPrincipal))
+      } else {
+        setUser(null)
       }
-      console.error('Login error:', error)
-      throw error
+    } catch (error) {
+      console.error('Auth check failed:', error)
+      setUser(null)
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  /**
-   * Logout and clear session
-   */
-  const logout = async () => {
-    try {
-      await instance.logoutPopup({
-        postLogoutRedirectUri: window.location.origin,
-      })
-    } catch (error) {
-      console.error('Logout error:', error)
-    }
+  // SWA auth doesn't use bearer tokens - the cookie is sent automatically
+  // But APIs can read user from x-ms-client-principal header
+  const getAccessToken = useCallback(async (): Promise<string | null> => {
+    // SWA handles auth via cookies, no token needed
+    // Return a placeholder so API knows user is authenticated
+    return user ? 'swa-auth' : null
+  }, [user])
+
+  // Register token getter with API service
+  useEffect(() => {
+    setAuthTokenGetter(getAccessToken)
+  }, [getAccessToken])
+
+  const login = (provider: 'aad' | 'github' | 'twitter' = 'aad') => {
+    swaLogin(provider)
+  }
+
+  const logout = () => {
+    swaLogout()
   }
 
   const value: AuthContextType = {
     user,
-    isAuthenticated,
+    isAuthenticated: !!user,
     isLoading,
     login,
     logout,
-    getAccessToken,
-  }
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
-}
-
-/**
- * Auth provider wrapper with MSAL
- */
-export function AuthProvider({ children }: { children: ReactNode }) {
-  // If B2C is not configured, provide a mock auth context for development
-  if (!isB2CConfigured()) {
-    return (
-      <MockAuthProvider>
-        {children}
-      </MockAuthProvider>
-    )
-  }
-
-  return (
-    <MsalProvider instance={msalInstance}>
-      <AuthProviderInner>{children}</AuthProviderInner>
-    </MsalProvider>
-  )
-}
-
-/**
- * Mock auth provider for development when B2C is not configured
- */
-function MockAuthProvider({ children }: { children: ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [isLoading] = useState(false)
-
-  const mockUser: AccountInfo = {
-    homeAccountId: 'demo-user-123',
-    localAccountId: 'demo-user-123',
-    environment: 'demo',
-    tenantId: 'demo',
-    username: 'demo@example.com',
-    name: 'Demo User',
-  }
-
-  const value: AuthContextType = {
-    user: isAuthenticated ? mockUser : null,
-    isAuthenticated,
-    isLoading,
-    login: async () => setIsAuthenticated(true),
-    logout: async () => setIsAuthenticated(false),
-    getAccessToken: async () => 'demo-token',
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
@@ -177,5 +101,7 @@ export function useAuth(): AuthContextType {
   }
   return context
 }
+
+export default AuthProvider
 
 export default AuthProvider
