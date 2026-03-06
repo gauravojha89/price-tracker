@@ -6,7 +6,7 @@ A modern, secure price tracking application that monitors product prices and not
 
 - 🔍 **Track Products**: Add products from Amazon, Best Buy, Target, Walmart, Costco, and more
 - 📉 **Daily Price Checks**: Automated daily price monitoring
-- 📧 **Instant Notifications**: Email or SMS alerts when prices drop
+- 📧 **Instant Notifications**: Email alerts when prices drop
 - 🔒 **Enterprise Security**: Azure AD B2C authentication, Managed Identity, no hardcoded secrets
 - 🎨 **Modern UI**: Clean, minimalistic Apple-inspired design
 - ☁️ **Serverless**: Zero infrastructure management, pay-per-use pricing

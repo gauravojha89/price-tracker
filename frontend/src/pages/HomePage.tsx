@@ -92,7 +92,7 @@ export default function HomePage() {
             <FeatureCard
               icon={<Bell className="w-6 h-6" />}
               title="Instant Notifications"
-              description="Get notified via email or SMS the moment a product you're tracking goes on sale or drops in price."
+              description="Get notified via email the moment a product you're tracking goes on sale or drops in price."
               delay={0.1}
             />
             <FeatureCard

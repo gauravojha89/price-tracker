@@ -427,8 +427,7 @@ az staticwebapp deploy --app-name <your-app>
 2. **Price Charts** - Visual graphs showing price history trends
 3. **Browser Extension** - Add products directly from store pages
 4. **Multiple Users** - Azure AD B2C authentication
-5. **SMS Notifications** - When Azure phone numbers are available
-6. **Price Predictions** - ML-based price trend forecasting
+5. **Price Predictions** - ML-based price trend forecasting
 
 ---
 
