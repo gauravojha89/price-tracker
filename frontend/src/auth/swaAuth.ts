@@ -46,8 +46,6 @@ export async function getAuthInfo(): Promise<AuthInfo> {
  */
 export function login(provider: 'aad' | 'apple' | 'github' | 'twitter' = 'aad', redirectTo?: string) {
   const redirect = redirectTo || window.location.pathname
-  // Set flag so loading screen shows during auth redirect
-  sessionStorage.setItem('auth_redirect', 'true')
   window.location.href = `/.auth/login/${provider}?post_login_redirect_uri=${encodeURIComponent(redirect)}`
 }
 
