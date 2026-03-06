@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { TrendingDown, Bell, Shield, Zap, ArrowRight, ArrowDown } from 'lucide-react'
 import { useAuth } from '../auth'
@@ -6,6 +7,13 @@ import { useAuth } from '../auth'
 export default function HomePage() {
   const navigate = useNavigate()
   const { isAuthenticated, isLoading } = useAuth()
+
+  // Auto-redirect authenticated users to dashboard
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      navigate('/dashboard', { replace: true })
+    }
+  }, [isAuthenticated, isLoading, navigate])
 
   const handleCTA = () => {
     if (isAuthenticated) {

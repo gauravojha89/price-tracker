@@ -14,7 +14,7 @@ export default function LoginModal({ isOpen, onClose, redirectTo }: LoginModalPr
 
   const handleProviderLogin = (provider: 'aad' | 'apple' | 'github') => {
     setLoading(provider)
-    login(provider, redirectTo || '/dashboard')
+    login(provider, redirectTo || '/')
   }
 
   const providers = [
