@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { ExternalLink, Trash2, RefreshCw, TrendingDown, TrendingUp } from 'lucide-react'
+import { ExternalLink, Trash2, RefreshCw, TrendingDown, TrendingUp, Search } from 'lucide-react'
 import type { Product } from '../types'
+import CompareModal from './CompareModal'
 
 interface ProductCardProps {
   product: Product
@@ -15,6 +17,7 @@ export default function ProductCard({
   onRefresh,
   isRefreshing,
 }: ProductCardProps) {
+  const [showCompareModal, setShowCompareModal] = useState(false)
   const currentPrice = product.currentPrice ?? 0
   const originalPrice = product.originalPrice ?? currentPrice
   const priceChange = originalPrice - currentPrice
@@ -108,9 +111,16 @@ export default function ProductCard({
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
           >
             <ExternalLink className="w-4 h-4" />
-            View Product
+            View
           </a>
         )}
+        <button
+          onClick={() => setShowCompareModal(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+        >
+          <Search className="w-4 h-4" />
+          Compare
+        </button>
         <button
           onClick={() => onRefresh(product.id)}
           disabled={isRefreshing}
@@ -127,6 +137,13 @@ export default function ProductCard({
           Remove
         </button>
       </div>
+
+      {/* Compare Modal */}
+      <CompareModal
+        isOpen={showCompareModal}
+        onClose={() => setShowCompareModal(false)}
+        productName={product.name}
+      />
     </motion.div>
   )
 }

@@ -181,7 +181,7 @@ async function checkProductPrice(context, product, productsContainer, usersConta
       
       const user = users[0];
       if (user && user.email && user.emailNotifications !== false) {
-        await sendPriceAlert(context, user.email, product, newPrice);
+        await sendPriceAlert(context, user.email, product, newPrice, result.storeName);
         
         updatedProduct.lastNotified = new Date().toISOString();
         await productsContainer.items.upsert(updatedProduct);
@@ -208,10 +208,7 @@ function shouldNotifyAgain(lastNotified) {
 async function scrapePrice(url, context) {
   try {
     const storeInfo = detectStore(url);
-    
-    if (!storeInfo.supported) {
-      return { error: `Store not supported: ${storeInfo.domain}` };
-    }
+    // Allow any URL - no store restriction
     
     const response = await fetch(url, {
       headers: {
@@ -257,7 +254,20 @@ function detectStore(url) {
     { patterns: ['newegg.com'], name: 'Newegg' },
     { patterns: ['bhphotovideo.com'], name: 'B&H Photo' },
     { patterns: ['apple.com'], name: 'Apple' },
-    { patterns: ['microcenter.com'], name: 'Micro Center' }
+    { patterns: ['microcenter.com'], name: 'Micro Center' },
+    { patterns: ['gilt.com'], name: 'Gilt' },
+    { patterns: ['macys.com'], name: 'Macys' },
+    { patterns: ['nordstrom.com'], name: 'Nordstrom' },
+    { patterns: ['kohls.com'], name: 'Kohls' },
+    { patterns: ['ebay.com'], name: 'eBay' },
+    { patterns: ['sephora.com'], name: 'Sephora' },
+    { patterns: ['ulta.com'], name: 'Ulta' },
+    { patterns: ['zappos.com'], name: 'Zappos' },
+    { patterns: ['6pm.com'], name: '6pm' },
+    { patterns: ['samsung.com'], name: 'Samsung' },
+    { patterns: ['dell.com'], name: 'Dell' },
+    { patterns: ['hp.com'], name: 'HP' },
+    { patterns: ['lenovo.com'], name: 'Lenovo' }
   ];
   
   for (const store of stores) {
@@ -266,7 +276,14 @@ function detectStore(url) {
     }
   }
   
-  return { supported: false, domain: new URL(url).hostname };
+  // For unknown stores, use the domain name
+  try {
+    const domain = new URL(url).hostname.replace('www.', '');
+    const storeName = domain.split('.')[0];
+    return { supported: true, name: storeName.charAt(0).toUpperCase() + storeName.slice(1), domain };
+  } catch {
+    return { supported: true, name: 'Unknown Store', domain: url };
+  }
 }
 
 function extractPrice(html, storeName) {
@@ -301,9 +318,9 @@ function extractPrice(html, storeName) {
   return { price, title };
 }
 
-async function sendPriceAlert(context, email, product, newPrice) {
+async function sendPriceAlert(context, email, product, newPrice, storeName) {
   const connectionString = process.env.ACS_CONNECTION_STRING;
-  const senderEmail = process.env.ACS_SENDER_EMAIL || "DoNotReply@d4972e00-557a-4f16-acb7-7803737a1477.azurecomm.net";
+  const senderEmail = process.env.ACS_SENDER_EMAIL || "DoNotReply@d4972e00-557a-4f16-acb7-7903737a1477.azurecomm.net";
   
   if (!connectionString) {
     throw new Error('ACS_CONNECTION_STRING not configured');
@@ -311,6 +328,7 @@ async function sendPriceAlert(context, email, product, newPrice) {
   
   const emailClient = new EmailClient(connectionString);
   const savings = product.targetPrice ? (((product.targetPrice - newPrice) / product.targetPrice) * 100).toFixed(0) : 0;
+  const storeDisplay = storeName || 'Store';
   
   const emailMessage = {
     senderAddress: senderEmail,
@@ -335,7 +353,7 @@ async function sendPriceAlert(context, email, product, newPrice) {
               Target: <s>$${product.targetPrice}</s> <span style="color: #059669; font-weight: 600;">Save ${savings}%</span>
             </div>
           </div>
-          <a href="${product.url}" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); color: white; text-decoration: none; border-radius: 12px; font-weight: 600;">Buy Now →</a>
+          <a href="${product.url}" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); color: white; text-decoration: none; border-radius: 12px; font-weight: 600;">Buy Now at ${storeDisplay} →</a>
         </td></tr>
       </table>
     </td></tr>

@@ -140,6 +140,23 @@ export async function testNotification(email: string): Promise<ApiResponse<{
   })
 }
 
+export interface StoreSearchResult {
+  store: string
+  icon: string
+  searchUrl: string
+  description: string
+}
+
+export async function searchStores(productName: string): Promise<ApiResponse<{
+  query: string
+  results: StoreSearchResult[]
+}>> {
+  return request('/search-stores', {
+    method: 'POST',
+    body: JSON.stringify({ productName }),
+  })
+}
+
 export default {
   getProducts,
   createProduct,
@@ -150,4 +167,5 @@ export default {
   checkPrice,
   checkAllPrices,
   testNotification,
+  searchStores,
 }

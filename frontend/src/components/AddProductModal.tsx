@@ -154,7 +154,7 @@ export default function AddProductModal({
                     />
                   </div>
                   <p className="mt-1.5 text-xs text-gray-500">
-                    Supported stores: Amazon, Best Buy, Target, Walmart, Costco, Home Depot, Lowes, Newegg, B&H Photo
+                    Paste any product URL from your favorite store - we'll track the price for you
                   </p>
                 </div>
 

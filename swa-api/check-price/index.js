@@ -174,12 +174,7 @@ async function scrapePrice(url, context) {
   try {
     // Determine store from URL
     const storeInfo = detectStore(url);
-    
-    if (!storeInfo.supported) {
-      return { 
-        error: `Store not yet supported: ${storeInfo.domain}. Supported stores: Amazon, Best Buy, Target, Walmart, Costco, Home Depot, Lowes, Newegg, B&H Photo` 
-      };
-    }
+    // Allow any URL - no store restriction
     
     // Fetch the page
     const response = await fetch(url, {
@@ -233,7 +228,20 @@ function detectStore(url) {
     { patterns: ['newegg.com'], name: 'Newegg' },
     { patterns: ['bhphotovideo.com'], name: 'B&H Photo' },
     { patterns: ['apple.com'], name: 'Apple' },
-    { patterns: ['microcenter.com'], name: 'Micro Center' }
+    { patterns: ['microcenter.com'], name: 'Micro Center' },
+    { patterns: ['gilt.com'], name: 'Gilt' },
+    { patterns: ['macys.com'], name: 'Macys' },
+    { patterns: ['nordstrom.com'], name: 'Nordstrom' },
+    { patterns: ['kohls.com'], name: 'Kohls' },
+    { patterns: ['ebay.com'], name: 'eBay' },
+    { patterns: ['sephora.com'], name: 'Sephora' },
+    { patterns: ['ulta.com'], name: 'Ulta' },
+    { patterns: ['zappos.com'], name: 'Zappos' },
+    { patterns: ['6pm.com'], name: '6pm' },
+    { patterns: ['samsung.com'], name: 'Samsung' },
+    { patterns: ['dell.com'], name: 'Dell' },
+    { patterns: ['hp.com'], name: 'HP' },
+    { patterns: ['lenovo.com'], name: 'Lenovo' }
   ];
   
   for (const store of stores) {
@@ -242,7 +250,14 @@ function detectStore(url) {
     }
   }
   
-  return { supported: false, domain: new URL(url).hostname };
+  // For unknown stores, use the domain name
+  try {
+    const domain = new URL(url).hostname.replace('www.', '');
+    const storeName = domain.split('.')[0];
+    return { supported: true, name: storeName.charAt(0).toUpperCase() + storeName.slice(1), domain };
+  } catch {
+    return { supported: true, name: 'Unknown Store', domain: url };
+  }
 }
 
 function extractPrice(html, storeName) {
