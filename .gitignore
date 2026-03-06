@@ -39,3 +39,6 @@ obj/
 # Temporary
 tmp/
 temp/
+
+# Timer function local secrets
+timer-function/local.settings.json

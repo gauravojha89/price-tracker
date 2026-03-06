@@ -127,7 +127,7 @@ export default function ProductCard({
           className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors disabled:opacity-50"
         >
           <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-          Refresh
+          {isRefreshing ? 'Checking...' : 'Check Price'}
         </button>
         <button
           onClick={() => onDelete(product.id)}
