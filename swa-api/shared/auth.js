@@ -100,17 +100,18 @@ async function requireAuth(req, context) {
 }
 
 /**
- * Get user ID from request (backwards compatible)
+ * Get user ID from request
+ * Returns null if not authenticated - caller must handle this
  */
 async function getUserId(req, context) {
   const user = await getAuthenticatedUser(req, context);
   
-  // For development without B2C configured
-  if (!user.authenticated && !B2C_CLIENT_ID) {
-    return 'demo-user-123';
+  if (!user.authenticated) {
+    context?.log?.warn('getUserId called for unauthenticated user');
+    return null;
   }
   
-  return user.id || null;
+  return user.id;
 }
 
 module.exports = {

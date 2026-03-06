@@ -11,8 +11,8 @@ export default function HomePage() {
     if (isAuthenticated) {
       navigate('/dashboard')
     } else {
-      // Redirect to Microsoft login - will come back to dashboard after auth
-      login('aad')
+      // Redirect to Microsoft login - will go to dashboard after auth
+      login('aad', '/dashboard')
     }
   }
 

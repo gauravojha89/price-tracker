@@ -13,7 +13,7 @@ interface AuthContextType {
   user: User | null
   isAuthenticated: boolean
   isLoading: boolean
-  login: (provider?: 'aad' | 'github' | 'twitter') => void
+  login: (provider?: 'aad' | 'github' | 'twitter', redirectTo?: string) => void
   logout: () => void
 }
 
@@ -72,8 +72,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAuthTokenGetter(getAccessToken)
   }, [getAccessToken])
 
-  const login = (provider: 'aad' | 'github' | 'twitter' = 'aad') => {
-    swaLogin(provider)
+  const login = (provider: 'aad' | 'github' | 'twitter' = 'aad', redirectTo?: string) => {
+    swaLogin(provider, redirectTo)
   }
 
   const logout = () => {
@@ -101,7 +101,5 @@ export function useAuth(): AuthContextType {
   }
   return context
 }
-
-export default AuthProvider
 
 export default AuthProvider

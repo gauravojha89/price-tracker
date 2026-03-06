@@ -1,4 +1,5 @@
 const fetch = require('node-fetch');
+const { requireAuth } = require('../shared/auth');
 
 /**
  * Search for a product across multiple stores
@@ -17,6 +18,13 @@ module.exports = async function (context, req) {
   
   if (req.method === 'OPTIONS') {
     context.res = { status: 204, headers };
+    return;
+  }
+  
+  // Require authentication
+  const authError = await requireAuth(req, context);
+  if (authError) {
+    context.res = { ...authError, headers };
     return;
   }
   

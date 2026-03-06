@@ -1,8 +1,16 @@
 const { EmailClient } = require("@azure/communication-email");
 const { SmsClient } = require("@azure/communication-sms");
+const { requireAuth } = require('../shared/auth');
 
 module.exports = async function (context, req) {
   context.log('Notification function triggered');
+  
+  // Require authentication
+  const authError = await requireAuth(req, context);
+  if (authError) {
+    context.res = authError;
+    return;
+  }
   
   const connectionString = process.env.ACS_CONNECTION_STRING;
   const senderEmail = process.env.ACS_SENDER_EMAIL || "DoNotReply@d4972e00-557a-4f16-acb7-7803737a1477.azurecomm.net";

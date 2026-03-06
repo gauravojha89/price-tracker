@@ -145,11 +145,11 @@ async function createProduct(context, req, userId) {
       body: resource
     };
   } catch (error) {
-    // Return the product even if DB not available (demo mode)
+    context.log.error('Failed to create product:', error);
     context.res = {
-      status: 201,
+      status: 500,
       headers: { 'Content-Type': 'application/json' },
-      body: product
+      body: { error: 'Failed to save product' }
     };
   }
 }
